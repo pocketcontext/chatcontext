@@ -10,7 +10,7 @@ All clients use PocketBase's default `users` collection. Authentication grants a
 
 Codes expire after ten minutes, can be consumed once, and are replaced by a new request. Each challenge permits at most five attempts; PocketBase also throttles attempts per account. Issuance has a per-IP limit. Successful consumption is serialized to prevent two concurrent exchanges from both succeeding. Attempt counters are private, excluded from SQL, and removed when PocketBase deletes the corresponding OTP.
 
-First issuance creates an unverified identity shell with a generated unknown password and the public label `Visitor`. It has no application access until the email code is proven. Public direct account creation remains blocked. Case variants resolve to the same email identity. A disabled account receives no code. Email delivery requires configured SMTP; no support reply notifications are sent in version one.
+First issuance creates an unverified identity shell with a generated unknown password and the private account name `Visitor`. Its directory label defaults to `User`. It has no application access until the email code is proven. Public direct account creation remains blocked. Case variants resolve to the same email identity. A disabled account receives no code. Email delivery requires configured SMTP; no support reply notifications are sent in version one.
 
 ## Workspace and autonomous clients
 
@@ -24,11 +24,11 @@ An operator bootstraps the first verified administrator through the PocketBase d
 
 Ordinary administrators can use these maintenance REST operations:
 
-- Create `users` with `email`, public `name`, `password`, and `passwordConfirm`. Created clients are verified by the administrator.
-- Patch an existing user with `disabled` only. Administrators cannot take over an existing identity by changing its password, email, verification state, or public name.
+- Create `users` with `email`, private account `name`, `password`, and `passwordConfirm`, optionally supplying `public_display_name`. Created clients are verified by the administrator.
+- Patch an existing user with `disabled` and/or `public_display_name`. Administrators cannot change its password, email, verification state, or private account name.
 - List/view `team_members` to discover membership IDs; create membership with `account` and `is_admin`; patch `is_admin`; delete membership to revoke team authority.
 
-The `team_members` REST reads are an administrator-only maintenance exception to the application's SQL-first read model. The collection remains unavailable through SQL. Other users cannot enumerate it. Auth record reads remain restricted to the account itself; the public directory exposes only ID and display name.
+The `team_members` REST reads are an administrator-only maintenance exception to the application's SQL-first read model. The collection remains unavailable through SQL. Other users cannot enumerate it. Auth record reads remain restricted to the account itself; the public directory exposes only ID and the explicit public alias (or `User` when unset or whitespace-only). Administrators and operators manage `public_display_name`; ordinary visitors and team members cannot edit it. Google sign-in never selects the public alias from the provider profile or client-supplied provisioning fields. Alias changes update the directory atomically with the account.
 
 The last active administrator cannot remove or demote their own final administrative membership or disable their account. Disabling an account rotates its token key: old API, refresh and file tokens remain revoked even if it is re-enabled. Account deletion is blocked to preserve authorship. Revoking team membership is applied to the next SQL snapshot and each REST/file authorization check. Administrator status never bypasses private-conversation membership.
 

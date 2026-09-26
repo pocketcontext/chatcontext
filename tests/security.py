@@ -3,7 +3,7 @@
 import argparse
 import urllib.request
 import urllib.error
-from integration import server, operator, account, path, query, upload, download
+from integration import server, operator, account, path, query, upload, download, PASSWORD
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--binary',required=True);args=ap.parse_args()
@@ -51,6 +51,31 @@ def main():
         directory=query(request,'SELECT * FROM user_directory',vt)
         assert {row['id'] for row in directory}=={visitor['id'],alice['id']},directory
         assert all(set(row)=={'id','name'} for row in directory)
+        assert all(row['name']=='User' for row in directory),directory
+        # Public identities are an explicit administrator choice, never users.name.
+        alice_path=path('users')+'/'+alice['id']
+        request('PATCH',alice_path,{'name':'Private Legal Name'},op)
+        def label():
+            return next(row['name'] for row in query(request,'SELECT * FROM user_directory',vt) if row['id']==alice['id'])
+        assert label()=='User'
+        request('PATCH',alice_path,{'public_display_name':'  Support Alice  '},at)
+        assert label()=='Support Alice'
+        request('PATCH',alice_path,{'name':'Different Private Name'},op)
+        assert label()=='Support Alice'
+        for token,record_id in ((vt,visitor['id']),(vt,alice['id']),(alt,alice['id'])):
+            request('PATCH',path('users')+'/'+record_id,{'public_display_name':'Unapproved alias'},token,expected=(400,403,404))
+        request('PATCH',path('user_directory')+'/'+alice['id'],{'name':'Forged alias'},vt,expected=(400,403,404))
+        assert label()=='Support Alice'
+        for value in ('', '   '):
+            request('PATCH',alice_path,{'public_display_name':value},at)
+            assert label()=='User'
+        provisioned=create('users',{'email':'alias@example.test','name':'Private Provisioned Name',
+            'public_display_name':'Support Helper','password':PASSWORD,'passwordConfirm':PASSWORD,'verified':True},at)
+        assert next(row['name'] for row in query(request,'SELECT * FROM user_directory',at) if row['id']==provisioned['id'])=='Support Helper'
+        assert provisioned['id'] not in {row['id'] for row in query(request,'SELECT * FROM user_directory',vt)}
+        # Deleting the last public reply removes the author, despite internal notes.
+        request('PATCH',path('messages')+'/'+public['id'],{'expected_revision':public['revision'],'deleted':True},alt)
+        assert {row['id'] for row in query(request,'SELECT * FROM user_directory',vt)}=={visitor['id']}
         # Administrator power does not grant entry to private conversations.
         private_channel=create('conversations',{'kind':'private_channel','title':'Alice and Bob','participants':[bob['id']]},alt)
         dm=create('conversations',{'kind':'dm','title':'Private DM','participants':[bob['id']]},alt)

@@ -6,7 +6,7 @@ Team messaging and customer support for humans and AI clients, built on [PocketC
 
 - Public/private channels, one-to-one and group DMs, and support conversations, all with threads. New channel members see existing history. Group DM membership is fixed.
 - Visitors sign in with a verified email code and see only their own support conversations. Team members see every support conversation and may reply without assignment. Private channels and DMs require membership, including for administrators.
-- Support has open/resolved states, optional team assignment and team-only internal notes. Visitor messages reopen resolved conversations. Visitors see public display names with the company label PocketContext; email addresses are not exported.
+- Support has open/resolved states, optional team assignment and team-only internal notes. Visitor messages reopen resolved conversations. Visitors see explicitly configured public display names, defaulting to `User`, with the company label PocketContext. Account names, Google profile names and email addresses are not exported in the directory.
 - Markdown text, emoji reactions, protected immutable attachments up to 25 MiB each, author edits and soft deletion. Audit originals are retained; administrators can inspect audit only where they also have conversation access.
 - Explicit read acknowledgements, private unread tracking, and participant-visible receipts in DMs/support. SQL reads never acknowledge messages. Mentions and thread replies populate a private SQL inbox. Change sequences support polling independently of read state.
 - Channels may be archived. Conversation history and complete backups are retained until deliberate maintenance applies an erasure policy.
@@ -55,6 +55,7 @@ All fixtures are synthetic and use temporary databases, local SMTP/provider stub
 ```sh
 python3 tests/integration.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/security.py --binary /absolute/path/to/pinned/pocketcontext
+python3 tests/directory_migration.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/realtime.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/auth.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/oauth_integration.py --binary /absolute/path/to/pinned/pocketcontext

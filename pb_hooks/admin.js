@@ -13,7 +13,7 @@ function user(e, creating) {
   if (creating && e.requestInfo().context === "oauth2") return e.next();
   if (!admin(e.app, e.auth)) throw new ForbiddenError("Administrator access is required.");
   const body = e.requestInfo().body;
-  const allowed = creating ? ["email", "name", "password", "passwordConfirm", "verified"] : ["disabled"];
+  const allowed = creating ? ["email", "name", "public_display_name", "password", "passwordConfirm", "verified"] : ["disabled", "public_display_name"];
   for (const key of Object.keys(body)) if (!allowed.includes(key)) throw new BadRequestError("This account field is operator-managed: " + key);
   if (creating) {
     // Administrator-created clients are ordinary identities. Membership is an

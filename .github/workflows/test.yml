@@ -41,6 +41,8 @@ jobs:
         run: CGO_ENABLED=1 go build -tags sqlite_math_functions -o bin/pocketcontext ./cmd/pocketcontext
       - name: Test messaging
         run: python3 chatcontext/tests/integration.py --binary pocketcontext/bin/pocketcontext
+      - name: Test public directory upgrade
+        run: python3 chatcontext/tests/directory_migration.py --binary pocketcontext/bin/pocketcontext
       - name: Test authorization boundaries
         run: python3 chatcontext/tests/security.py --binary pocketcontext/bin/pocketcontext
       - name: Test realtime authorization and revocation

@@ -11,7 +11,9 @@ function sync(e, deleting) {
         return;
       }
       const row = rows.length ? rows[0] : new Record(txApp.findCollectionByNameOrId("user_directory"));
-      const name = e.record.getString("name");
+      // Account names (including Google profile names) are private identity
+      // data. Only an explicitly configured public alias may leave users.
+      const name = e.record.getString("public_display_name").trim() || "User";
       if (rows.length && row.getString("name") === name) return;
       row.set("id", e.record.id);
       row.set("name", name);

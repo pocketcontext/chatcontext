@@ -13,7 +13,7 @@
 | inbox | account, message, reason (`mention`, `reply`), created; server-managed |
 | changes | seq, collection, record, conversation, message, internal, action, created; monotonic cursor and no message content |
 | audit_log | collection, record, conversation, message, internal, actor, action, changes JSON, created; administrators with conversation access only |
-| user_directory | id, name; public display labels only, no emails; visitor projection includes self and visible support authors |
+| user_directory | id, name; explicit public alias or `User`, no account names or emails; visitor projection includes self and visible support authors |
 
 Business updates require extra `expected_revision` from the last SQL read. Do not write attribution, audit, inbox or change records. No administrator privacy bypass. Writes use `/api/collections/COLLECTION/records` POST or PATCH `/ID`; batches use `/api/batch`. File uploads are multipart POSTs to attachments; protected originals use `/api/files/attachments/ID/FILENAME` with a short-lived file token.
 
