@@ -1,0 +1,3 @@
+# ChatContext
+
+Read README.md and docs/data-model.md before changes. Use the default PocketBase users collection for humans, visitors and AI clients. Keep domain logic here and PocketContext application-independent. Read through authenticated filtered SQL; ordinary writes use PocketBase REST. Never let administrator status bypass private conversations. Protect support internal notes, attachments, directory projections, change events, receipts and audit independently. Use revision checks and transactional change/audit/inbox writes. SQL reads never acknowledge messages. Preserve user changes; test only synthetic records in isolated temporary storage. No production deployment or provider provisioning is authorized by repository publication.

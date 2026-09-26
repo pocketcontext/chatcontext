@@ -1,0 +1,140 @@
+{
+  "authCollection": "users",
+  "tables": {
+    "user_directory": [
+      "id",
+      "name"
+    ],
+    "conversations": [
+      "id",
+      "kind",
+      "title",
+      "visitor",
+      "assignee",
+      "status",
+      "archived",
+      "created_by",
+      "updated_by",
+      "revision",
+      "created",
+      "updated"
+    ],
+    "memberships": [
+      "id",
+      "conversation",
+      "account",
+      "active",
+      "created_by",
+      "updated_by",
+      "revision",
+      "created",
+      "updated"
+    ],
+    "messages": [
+      "id",
+      "conversation",
+      "parent",
+      "body",
+      "internal",
+      "deleted",
+      "mentions",
+      "author",
+      "created_by",
+      "updated_by",
+      "revision",
+      "created",
+      "updated"
+    ],
+    "attachments": [
+      "id",
+      "message",
+      "original",
+      "sha256",
+      "author",
+      "created_by",
+      "updated_by",
+      "revision",
+      "created",
+      "updated"
+    ],
+    "reactions": [
+      "id",
+      "message",
+      "account",
+      "emoji",
+      "active",
+      "created_by",
+      "updated_by",
+      "revision",
+      "created",
+      "updated"
+    ],
+    "read_receipts": [
+      "id",
+      "message",
+      "account",
+      "created_by",
+      "updated_by",
+      "revision",
+      "created",
+      "updated"
+    ],
+    "inbox": [
+      "id",
+      "account",
+      "message",
+      "reason",
+      "created"
+    ],
+    "changes": [
+      "id",
+      "seq",
+      "collection",
+      "record",
+      "conversation",
+      "message",
+      "internal",
+      "action",
+      "created"
+    ],
+    "audit_log": [
+      "id",
+      "collection",
+      "record",
+      "conversation",
+      "message",
+      "internal",
+      "actor",
+      "action",
+      "changes",
+      "created"
+    ]
+  },
+  "timeoutMs": 2000,
+  "maxRows": 500,
+  "maxBytes": 1048576,
+  "snapshot": {
+    "filters": {
+      "user_directory": "id = :requester OR EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) OR EXISTS (SELECT 1 FROM messages m JOIN conversations c ON c.id = m.conversation WHERE m.author = user_directory.id AND m.internal = 0 AND m.deleted = 0 AND c.kind = 'support' AND c.visitor = :requester)",
+      "conversations": "((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (conversations.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = conversations.id AND cm.account = :requester AND cm.active = 1))) OR (conversations.kind = 'support' AND conversations.visitor = :requester))",
+      "memberships": "EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND EXISTS (SELECT 1 FROM conversations c WHERE c.id = memberships.conversation AND ((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (c.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = c.id AND cm.account = :requester AND cm.active = 1))) OR (c.kind = 'support' AND c.visitor = :requester)))",
+      "messages": "EXISTS (SELECT 1 FROM conversations c WHERE c.id = messages.conversation AND ((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (c.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = c.id AND cm.account = :requester AND cm.active = 1))) OR (c.kind = 'support' AND c.visitor = :requester))) AND (messages.internal = 0 OR EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester))",
+      "attachments": "EXISTS (SELECT 1 FROM messages m WHERE m.id = attachments.message AND EXISTS (SELECT 1 FROM conversations c WHERE c.id = m.conversation AND ((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (c.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = c.id AND cm.account = :requester AND cm.active = 1))) OR (c.kind = 'support' AND c.visitor = :requester))) AND (m.internal = 0 OR EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester)) AND m.deleted = 0)",
+      "reactions": "EXISTS (SELECT 1 FROM messages m WHERE m.id = reactions.message AND EXISTS (SELECT 1 FROM conversations c WHERE c.id = m.conversation AND ((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (c.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = c.id AND cm.account = :requester AND cm.active = 1))) OR (c.kind = 'support' AND c.visitor = :requester))) AND (m.internal = 0 OR EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester)) AND m.deleted = 0)",
+      "read_receipts": "EXISTS (SELECT 1 FROM messages m WHERE m.id = read_receipts.message AND EXISTS (SELECT 1 FROM conversations c WHERE c.id = m.conversation AND ((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (c.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = c.id AND cm.account = :requester AND cm.active = 1))) OR (c.kind = 'support' AND c.visitor = :requester))) AND (m.internal = 0 OR EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester)) AND m.deleted = 0) AND (account = :requester OR EXISTS (SELECT 1 FROM messages m JOIN conversations c ON c.id = m.conversation WHERE m.id = read_receipts.message AND c.kind IN ('dm','support')))",
+      "inbox": "account = :requester AND EXISTS (SELECT 1 FROM messages m WHERE m.id = inbox.message AND EXISTS (SELECT 1 FROM conversations c WHERE c.id = m.conversation AND ((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (c.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = c.id AND cm.account = :requester AND cm.active = 1))) OR (c.kind = 'support' AND c.visitor = :requester))) AND (m.internal = 0 OR EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester)) AND m.deleted = 0)",
+      "changes": "EXISTS (SELECT 1 FROM conversations c WHERE c.id = changes.conversation AND ((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (c.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = c.id AND cm.account = :requester AND cm.active = 1))) OR (c.kind = 'support' AND c.visitor = :requester))) AND (changes.internal = 0 OR EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester))",
+      "audit_log": "EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester AND t.is_admin = 1) AND EXISTS (SELECT 1 FROM conversations c WHERE c.id = audit_log.conversation AND ((EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester) AND (c.kind IN ('public_channel','support') OR EXISTS (SELECT 1 FROM memberships cm WHERE cm.conversation = c.id AND cm.account = :requester AND cm.active = 1))) OR (c.kind = 'support' AND c.visitor = :requester))) AND (audit_log.internal = 0 OR EXISTS (SELECT 1 FROM team_members t WHERE t.account = :requester))"
+    },
+    "policyTables": {
+      "team_members": [
+        "account",
+        "is_admin"
+      ]
+    },
+    "timeoutMs": 5000,
+    "maxRows": 100000,
+    "maxBytes": 33554432,
+    "maxConcurrent": 4
+  }
+}
