@@ -26,7 +26,7 @@ Public HTTPS health, operator authentication, the default `users` identity colle
 
 Google Workspace JIT is configured for verified `pocketcontext.com` identities. The dedicated Google Web client is separate from sibling clients. The user confirmed Internal audience and both redirects: `http://127.0.0.1:8765/callback` and `https://chat.pocketcontext.com/api/oauth2-redirect`. **A real Google browser login remains unverified.** Configuration and synthetic OAuth tests do not establish end-to-end human sign-in.
 
-Existing ONCE SMTP settings were reused. SMTP TLS and authentication passed. One user-authorized external visitor sign-in code was requested successfully, and the recipient confirmed receipt. Live email-code delivery passed; code consumption has not been tested against the live service. Email is used for authentication only.
+Existing ONCE SMTP settings were reused. SMTP TLS and authentication passed. One user-authorized external visitor sign-in code was requested successfully. The email initially confirmed by the recipient was a superuser new-location alert from deployment maintenance, not confirmation of the visitor code. The recipient subsequently confirmed that the separate visitor code also arrived. Visitor code delivery passed; live code consumption remains untested. Superuser security alerts remain enabled. The default application name was corrected from Acme to ChatContext through maintenance settings and in startup configuration; the deployment integration test passed.
 
 ## Backups and recovery
 

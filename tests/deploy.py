@@ -29,6 +29,7 @@ def main():
             'identity': 'admin@example.com', 'password': 'SyntheticAdminPassword123!',
         })['token']
         settings = request('GET', '/api/settings', token=token)
+        assert settings['meta']['appName'] == 'ChatContext'
         assert settings['meta']['appURL'] == env['BASE_URL']
         assert settings['smtp']['enabled'] and settings['smtp']['host'] == env['SMTP_ADDRESS']
         assert settings['rateLimits']['enabled']

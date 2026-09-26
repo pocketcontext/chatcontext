@@ -47,6 +47,8 @@ function settings(app) {
     }
   };
 
+  group("application name", "ChatContext", (set) => set("meta", "appName", "ChatContext"));
+
   // Separate groups: a sender that PocketBase rejects must not keep the application URL from being applied.
   const url = env("BASE_URL"), sender = env("MAILER_FROM_ADDRESS");
   if (url) {
