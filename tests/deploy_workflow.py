@@ -25,6 +25,11 @@ installer = load("installer", "install.py")
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_deploy_requires_explicit_application_opt_in(self):
+        workflow = (ROOT / '.github/workflows/image.yml').read_text()
+        deployment = workflow.split('  deploy:', 1)[1]
+        self.assertIn("if: vars.CHATCONTEXT_DEPLOY_ENABLED == 'true' && vars.COLORS_PROFILE != ''", deployment)
+
     def run_hook(self, fail=None, killed=False, count=1, recovery_count=None, image=None):
         calls = []
         inspections = 0

@@ -17,7 +17,7 @@ SQL is the primary read path for historical and new messages; REST handles mutat
 - Existing default users collection for every identity. Seven-day renewable app sessions. Email OTP expires in ten minutes, one use, replacement invalidation, five attempts; no anonymous direct signup.
 - Verified Google Workspace first admission grants ordinary team membership. Administrator-only role and disabling controls. No automatic admin grants. Initial administrator explicitly provisioned by operator; no invented personal identity.
 - Autonomous AI clients have named ordinary team identities; personal assistants may act under human identities. Public display labels are distinct from emails.
-- Private repository pocketcontext/chatcontext initially; image ghcr.io/pocketcontext/chatcontext. Future origin https://chat.pocketcontext.com, separate Google client and dedicated private chatcontext-backup bucket/prefix.
+- Public repository pocketcontext/chatcontext and public image ghcr.io/pocketcontext/chatcontext, as requested after implementation. Future origin https://chat.pocketcontext.com, separate Google client and dedicated private chatcontext-backup bucket/prefix.
 - Hourly complete database/original-file backups and a two-hour recovery engineering target for initial small deployment. Retention indefinite until explicit maintenance policy.
 - No external email replies/notifications in v1: only authentication email. No frontend, AI orchestration, production provisioning, Slack/WhatsApp import, E2E encryption, voice/video, or typing/presence implementation. Ordinary REST reads/realtime are deliberately locked; optional live updates are deferred while SQL polling remains the supported consumption path.
 
