@@ -26,7 +26,7 @@ Public HTTPS health, operator authentication, the default `users` identity colle
 
 Google Workspace JIT is configured for verified `pocketcontext.com` identities. The dedicated Google Web client is separate from sibling clients. The user confirmed Internal audience and both redirects: `http://127.0.0.1:8765/callback` and `https://chat.pocketcontext.com/api/oauth2-redirect`. **A real Google browser login remains unverified.** Configuration and synthetic OAuth tests do not establish end-to-end human sign-in.
 
-Existing ONCE SMTP settings were reused. SMTP TLS and authentication passed. One user-authorized external visitor sign-in code was requested successfully; recipient confirmation is pending. **Live email-code delivery remains unverified.** Email is used for authentication only; visitor sign-in should be accepted only after its delivery check.
+Existing ONCE SMTP settings were reused. SMTP TLS and authentication passed. One user-authorized external visitor sign-in code was requested successfully, and the recipient confirmed receipt. Live email-code delivery passed; code consumption has not been tested against the live service. Email is used for authentication only.
 
 ## Backups and recovery
 
