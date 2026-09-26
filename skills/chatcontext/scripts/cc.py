@@ -469,6 +469,10 @@ def messaging(cfg, args):
         return upload(cfg, args.file, args.message)
     if cmd == 'download':
         return download(cfg, args.id, args.target)
+    if cmd == 'display-name':
+        # Team members publish only their own alias; an empty value restores the neutral "User".
+        record = must(cfg, 'PATCH', records('users', self_id(cfg)), {'public_display_name': args.name})
+        return {'id': record['id'], 'public_display_name': record.get('public_display_name', '')}
     if cmd in ('inbox', 'unread'):
         account = self_id(cfg)
         if cmd == 'inbox':
@@ -546,6 +550,8 @@ def add_messaging(commands, pretty):
     p = command('download', 'download a protected original and verify checksum; never overwrite')
     p.add_argument('id')
     p.add_argument('target')
+    p = command('display-name', 'set your public directory alias (team members only); empty resets to User')
+    p.add_argument('name')
 
 
 # Commands
@@ -656,7 +662,7 @@ def run(args):
             if method == 'PATCH':
                 require_revision(entry['body'])
         body = {'requests': requests}
-    if args.command in ('channel', 'dm', 'support', 'send', 'reply', 'note', 'edit', 'delete', 'sync', 'ack', 'inbox', 'unread', 'upload', 'download'):
+    if args.command in ('channel', 'dm', 'support', 'send', 'reply', 'note', 'edit', 'delete', 'sync', 'ack', 'inbox', 'unread', 'upload', 'download', 'display-name'):
         say(dump(messaging(cfg, args), args.pretty), sys.stdout)
         return 0
     if args.command == 'check':
@@ -666,7 +672,7 @@ def run(args):
         refreshed = must(cfg, 'POST', '/api/collections/users/auth-refresh')
         hide(refreshed.get('token'))
         record = refreshed['record']
-        data = {'id': record['id'], 'name': record.get('name', ''), 'email': cfg['email'], 'url': cfg['url']}
+        data = {'id': record['id'], 'name': record.get('name', ''), 'public_display_name': record.get('public_display_name', ''), 'email': cfg['email'], 'url': cfg['url']}
     elif args.command == 'schema':
         data = must(cfg, 'GET', '/api/context/schema')
     elif args.command in ('sql', 'query'):

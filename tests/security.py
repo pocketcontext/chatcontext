@@ -62,8 +62,15 @@ def main():
         assert label()=='Support Alice'
         request('PATCH',alice_path,{'name':'Different Private Name'},op)
         assert label()=='Support Alice'
-        for token,record_id in ((vt,visitor['id']),(vt,alice['id']),(alt,alice['id'])):
+        for token,record_id in ((vt,visitor['id']),(vt,alice['id']),(alt,bob['id']),(bt,alice['id'])):
             request('PATCH',path('users')+'/'+record_id,{'public_display_name':'Unapproved alias'},token,expected=(400,403,404))
+        # Team members may publish only their own alias, and no other account field.
+        for body in ({'name':'Self Private Name'},{'disabled':True},{'public_display_name':'Alice','email':'forged@example.test'},{'public_display_name':'Alice','verified':False}):
+            request('PATCH',alice_path,body,alt,expected=(400,403))
+        assert label()=='Support Alice'
+        request('PATCH',alice_path,{'public_display_name':' Alice '},alt)
+        assert label()=='Alice'
+        request('PATCH',alice_path,{'public_display_name':'Support Alice'},at)
         request('PATCH',path('user_directory')+'/'+alice['id'],{'name':'Forged alias'},vt,expected=(400,403,404))
         assert label()=='Support Alice'
         for value in ('', '   '):
@@ -103,6 +110,7 @@ def main():
         download(request,internal_file,bt,404)
         raw_file(revoked_file_token,alt,404)
         request('POST',path('messages'),{'conversation':cid,'body':'Revoked'},bt,expected=(400,403,404))
+        request('PATCH',path('users')+'/'+bob['id'],{'public_display_name':'Revoked alias'},bt,expected=(400,403,404))
         # Assignment does not prevent the visitor from resolving their own ticket.
         assigned=request('PATCH',path('conversations')+'/'+cid,{'expected_revision':support['revision'],'assignee':alice['id']},alt)
         closed=request('PATCH',path('conversations')+'/'+cid,{'expected_revision':assigned['revision'],'status':'resolved'},vt)

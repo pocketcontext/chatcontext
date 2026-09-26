@@ -39,7 +39,7 @@ Generic `create COLLECTION JSON` and `update COLLECTION ID JSON` cover membershi
 
 Any team account can reply to support, optionally assign/reassign it to one team account, and resolve/reopen it. Assignment indicates responsibility and never grants exclusive permission. Update a conversation with `{"assignee":"ACCOUNT_ID","expected_revision":N}` or `{"status":"resolved","expected_revision":N}`. A new visitor message reopens automatically; internal notes do not.
 
-Visitors see the author's explicitly configured public alias (default `User`) with company label “PocketContext”; emails and internal names are not a public directory. Visitors can mention only visible team authors from their conversation. They cannot invite others or browse team conversations.
+Visitors see the author's explicitly configured public alias (default `User`) with company label “PocketContext”. Team members set their own with `cc display-name 'Alias'` (empty resets to `User`); `whoami` shows it. Visitors cannot choose an alias; emails and internal names are not a public directory. Visitors can mention only visible team authors from their conversation. They cannot invite others or browse team conversations.
 
 Create a membership using conversation/account and `active:true`; update `active` with the current revision to leave/remove/rejoin. Team members manage public membership; current private-channel members manage its membership. New members see full history; leaving/removal revokes private access. Archive a channel with `{"archived":true,"expected_revision":N}` to preserve readable history while stopping new messages.
 

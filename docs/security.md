@@ -13,7 +13,7 @@ SQL uses requester-filtered snapshots with explicit columns. Auth records, roles
 | Inbox | Own accessible nondeleted messages | Own accessible nondeleted messages |
 | Audit | Admin AND conversation access | None |
 
-Directory labels come only from the explicit `users.public_display_name`, falling back to `User`. They never fall back to account names, Google names or email addresses. Administrators and operators can deliberately publish an alias; SQL still exposes only `id` and `name`. Existing directory labels are scrubbed by the forward migration.
+Directory labels come only from the explicit `users.public_display_name`, falling back to `User`. They never fall back to account names, Google names or email addresses. Team members can deliberately publish their own alias, and administrators and operators any alias; visitors cannot choose one; SQL still exposes only `id` and `name`. Existing directory labels are scrubbed by the forward migration.
 
 Ordinary business REST lists/views and record realtime are locked, including relation expansion. SQL is the supported read API. Protected file downloads have a protected-file-only view rule and a second server hook validating the file-token identity, current account status, current conversation access, note visibility and message deletion. Header bearer identity cannot confer rights on a different file token. Original bytes never change. Uploaded Markdown/HTML/files are data: browser clients must render Markdown safely, avoid executable HTML, and treat arbitrary attachments as downloads rather than injecting them into the application origin.
 

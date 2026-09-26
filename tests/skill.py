@@ -37,6 +37,11 @@ def main():
             return json.loads(result.stdout) if result.returncode == 0 and result.stdout.startswith(('{', '[')) else result.stdout
         identity = cli('whoami')
         assert identity['id'] == team['id']
+        assert identity['public_display_name'] == ''
+        assert cli('display-name', 'Skill Team')['public_display_name'] == 'Skill Team'
+        assert cli('whoami')['public_display_name'] == 'Skill Team'
+        assert cli('query', f"SELECT name FROM user_directory WHERE id = '{team['id']}'")['rows'] == [['Skill Team']]
+        cli('display-name', 'Visitor alias', email=visitor['email'], expected=1)
         schema = cli('schema')
         snapshot = ROOT / 'skills/chatcontext/references/schema.json'
         if args.write_schema:
