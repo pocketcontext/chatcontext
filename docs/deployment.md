@@ -1,6 +1,6 @@
-# Deployment preparation
+# Deployment and recovery
 
-No production deployment, provider resource creation, SMTP verification or real Google browser login is performed by this repository. The separate website chat UI is outside the application image. The proposed application origin is `https://chat.pocketcontext.com`; the image is `ghcr.io/pocketcontext/chatcontext`. The repository is public and the container is intended for anonymous pulls. Verify package visibility and anonymous manifest/configuration/layer access before deployment; repository visibility alone does not establish package visibility.
+ChatContext is deployed at `https://chat.pocketcontext.com`; see [the production deployment record](../DEPLOYMENT.md) for exact image digests, verified checks and remaining verification. The separate website chat UI is outside the application image. The repository and `ghcr.io/pocketcontext/chatcontext` image are public; anonymous manifest/configuration/layer access was verified independently of repository visibility. Future deployments still require authorization and verification of their own provider settings.
 
 The image pins PocketContext, base-image digests and Litestream release checksums. It serves port 80 with database-backed `/up`, stores all state under `/storage/pb_data`, enables rate limits, and uses tini for signal forwarding. The Docker build context denies new files by default. Only synthetic test data belongs in CI.
 

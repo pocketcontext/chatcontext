@@ -11,7 +11,7 @@ Team messaging and customer support for humans and AI clients, built on [PocketC
 - Explicit read acknowledgements, private unread tracking, and participant-visible receipts in DMs/support. SQL reads never acknowledge messages. Mentions and thread replies populate a private SQL inbox. Change sequences support polling independently of read state.
 - Channels may be archived. Conversation history and complete backups are retained until deliberate maintenance applies an erasure policy.
 
-See [the implementation brief](docs/implementation-brief.md), [data model](docs/data-model.md), [security contract](docs/security.md) and [deployment preparation](docs/deployment.md). See [release evidence and image digests](docs/release.md). There is no running production instance supplied by this repository.
+See [the implementation brief](docs/implementation-brief.md), [data model](docs/data-model.md), [security contract](docs/security.md) and [deployment preparation](docs/deployment.md). See [release evidence and image digests](docs/release.md). The production API is available at https://chat.pocketcontext.com; see [deployment evidence and remaining verification](DEPLOYMENT.md).
 
 ## Run
 
