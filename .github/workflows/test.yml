@@ -61,3 +61,5 @@ jobs:
         run: python3 chatcontext/tests/client.py
       - name: Test OAuth client
         run: python3 chatcontext/tests/oauth.py
+      - name: Test opt-in tracing and snapshot ownership
+        run: python3 chatcontext/tests/tracing.py --binary pocketcontext/bin/pocketcontext

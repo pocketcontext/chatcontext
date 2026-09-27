@@ -136,5 +136,12 @@
     "maxRows": 100000,
     "maxBytes": 33554432,
     "maxConcurrent": 4
+  },
+  "tracing": {
+    "enabled": true,
+    "service": "chatcontext",
+    "delivery": "buffer",
+    "captureSql": true,
+    "maxBytes": 16777216
   }
 }

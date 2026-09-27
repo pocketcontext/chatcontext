@@ -71,3 +71,7 @@ python3 tests/deploy_workflow.py
 Container CI also runs `docker/smoke.py config`, `smoke` and `restore` before publishing an image. Full recovery verifies the database and original attachment bytes. Disable automatic updates and use the dedicated locked graceful-stop wrapper for any authorized production deployment. No second writer may restore against the live replica.
 
 Identity/client infrastructure was adapted from RaiseContext, with filtered-snapshot and complete-backup infrastructure from AccountContext. The conversation schema and authorization policies are application-owned.
+
+## Optional observability
+
+The pinned server supports per-request, requester-owned buffer tracing. Ordinary requests remain untraced. See [the portable skill](skills/chatcontext/SKILL.md#optional-request-tracing) for separate ObserveContext login, command capture, SQL disclosure and retry instructions. Filtered snapshot timings preserve the application’s existing read policies. Validate adoption with `python3 tests/tracing.py --binary /absolute/path/to/pinned/pocketcontext`.
