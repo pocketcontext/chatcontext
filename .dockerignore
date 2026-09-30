@@ -10,7 +10,11 @@
 !docker/backup.py
 
 !ui/
-!ui/**
-ui/node_modules/
-ui/dist/
-ui/test-results/
+ui/**
+!ui/package.json
+!ui/pnpm-lock.yaml
+!ui/index.html
+!ui/tsconfig.json
+!ui/vite.config.ts
+!ui/src/
+!ui/src/**

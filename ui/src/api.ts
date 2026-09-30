@@ -39,7 +39,10 @@ export async function query(sql: string): Promise<Row[]> {
       Object.fromEntries(r.columns.map((c, i) => [c, row[i]])),
     );
   } catch (e) {
-    if ((e as { status?: number }).status === 401 && token === store.token)
+    if (
+      [401, 403].includes((e as { status?: number }).status || 0) &&
+      token === store.token
+    )
       store.clear();
     throw e;
   }
@@ -103,4 +106,37 @@ export function safeParams(query: string) {
   const n = Number(p.get("offset"));
   if (!Number.isSafeInteger(n) || n < 0 || n > 1000000) p.delete("offset");
   return p;
+}
+
+export async function downloadFile(
+  table: string,
+  id: string,
+  name: string,
+  signal: AbortSignal,
+) {
+  const session = pb.authStore.token;
+  const active = () => {
+    if (
+      signal.aborted ||
+      session !== pb.authStore.token ||
+      !pb.authStore.isValid
+    )
+      throw Error("Session changed");
+  };
+  active();
+  const token = await pb.files.getToken();
+  active();
+  const response = await fetch(
+    pb.files.getURL({ id, collectionName: table }, name, { token }),
+    { signal, cache: "no-store", referrerPolicy: "no-referrer" },
+  );
+  if (!response.ok) throw Error("Unavailable");
+  const blob = await response.blob();
+  active();
+  const object = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = object;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(object), 1000);
 }

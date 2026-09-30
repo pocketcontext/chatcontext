@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { app, type Entity } from "./config";
 import {
   pb,
+  downloadFile,
   query,
   entity,
   label,
@@ -125,30 +126,17 @@ function ProtectedFile({
   field: string;
   value: unknown;
 }) {
+  const pending = useRef<AbortController | null>(null);
+  useEffect(() => () => pending.current?.abort(), []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function download() {
     setBusy(true);
     setError("");
     try {
-      const token = await pb.files.getToken();
-      const url = pb.files.getURL(
-        { id, collectionName: e.table },
-        String(value),
-        { token },
-      );
-      const response = await fetch(url, {
-        cache: "no-store",
-        referrerPolicy: "no-referrer",
-      });
-      if (!response.ok) throw Error("Unavailable");
-      const blob = await response.blob();
-      const object = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = object;
-      link.download = String(value);
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(object), 1000);
+      pending.current?.abort();
+      pending.current = new AbortController();
+      await downloadFile(e.table, id, String(value), pending.current.signal);
     } catch {
       setError("File unavailable or access denied.");
     } finally {
@@ -362,11 +350,17 @@ export default function App() {
     return () => window.removeEventListener("hashchange", listener);
   }, []);
   function navigate(table: string, id: string, params: URLSearchParams) {
-    location.hash =
-      "/" +
+    // Internal navigation must update state synchronously. A queued hashchange
+    // can otherwise erase text typed immediately after changing a page/filter.
+    const hash =
+      "#/" +
       table +
       (id ? "/" + id : "") +
       (params.size ? "?" + params.toString() : "");
+    history.pushState(null, "", hash);
+    const next = parseRoute();
+    setRoute(next);
+    setQ(next.params.get("q") || "");
   }
   useEffect(() => {
     if (q === (route.params.get("q") || "")) return;

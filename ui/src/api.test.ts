@@ -1,6 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { app } from "./config";
-import { searchSQL, ident, literal, parseRoute, safeParams } from "./api";
+import {
+  pb,
+  query,
+  searchSQL,
+  ident,
+  literal,
+  parseRoute,
+  safeParams,
+} from "./api";
 import schema from "../../pocketcontext.json";
 describe("reader contract", () => {
   it("only references exported fields and configured relationship targets", () => {
@@ -52,4 +60,14 @@ describe("reader contract", () => {
     expect(safeParams("offset=-3").has("offset")).toBe(false);
     expect(safeParams("offset=30").get("offset")).toBe("30");
   });
+});
+
+it("clears the session on an authenticated SQL denial", async () => {
+  pb.authStore.save("test-session", null);
+  const send = vi.spyOn(pb, "send").mockRejectedValueOnce({ status: 403 });
+  await expect(
+    query("SELECT id FROM " + app.entities[0].table),
+  ).rejects.toEqual({ status: 403 });
+  expect(pb.authStore.token).toBe("");
+  send.mockRestore();
 });
