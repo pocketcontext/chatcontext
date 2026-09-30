@@ -31,11 +31,12 @@ def run(binary):
         foreign,ft=account(request,op,'foreign@example.com',True)
         create=lambda table,body,tok=token:request('POST',path(table),body,tok)
         records=[create('conversations',{'kind':'public_channel','title':f'Fixture conversation {i:02}'}) for i in range(35)]
+        owned=create('conversations',{'kind':'private_channel','title':'Reader-only conversation'})
         first=records[0];message=create('messages',{'conversation':first['id'],'body':'Readable discussion evidence'})
         attachment,_=upload(request,message['id'],token)
         private=create('conversations',{'kind':'private_channel','title':'Restricted conversation'},ft)
         hidden=create('messages',{'conversation':private['id'],'body':'Private team secret'},ft)
-        fixture=dict(email='reader@example.com',password=PASSWORD,table='conversations',label='Conversations',id=first['id'],title=first['title'],needle=records[-1]['title'],forbiddenTable='messages',forbiddenId=hidden['id'],forbiddenText='Private team secret',relationTitle='Readable discussion evidence',relationTable='messages',relationId=message['id'],fileTable='attachments',fileId=attachment['id'])
+        fixture=dict(authCollection='users',otherEmail='foreign@example.com',privateTable='conversations',privateId=owned['id'],privateText=owned['title'],email='reader@example.com',password=PASSWORD,table='conversations',label='Conversations',id=first['id'],title=first['title'],needle=records[-1]['title'],forbiddenTable='messages',forbiddenId=hidden['id'],forbiddenText='Private team secret',relationTitle='Readable discussion evidence',relationTable='messages',relationId=message['id'],fileTable='attachments',fileId=attachment['id'])
         def action(action):
             if action=='/revoke':request('PATCH',path('users')+'/'+user['id'],{'disabled':True},op)
             elif action=='/assert-unread':assert query(request,'SELECT id FROM read_receipts',token)==[]

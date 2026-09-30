@@ -4,6 +4,9 @@ import remarkGfm from "remark-gfm";
 import { app, type Entity } from "./config";
 import {
   pb,
+  sessionEpoch,
+  refreshSession,
+  signIn,
   downloadFile,
   query,
   entity,
@@ -308,6 +311,21 @@ function Detail({ e, id }: { e: Entity; id: string }) {
   );
 }
 export default function App() {
+  const [session, setSession] = useState(sessionEpoch);
+  useEffect(() => pb.authStore.onChange(() => setSession(sessionEpoch())), []);
+  useEffect(() => {
+    void refreshSession();
+    const focus = () => {
+      void refreshSession();
+    };
+    window.addEventListener("focus", focus);
+    return () => window.removeEventListener("focus", focus);
+  }, []);
+  // Remount every private view, including relationship labels, on auth changes.
+  // The destination remains in the URL and is restored after authentication.
+  return <Reader key={session} />;
+}
+function Reader() {
   const [authenticated, setAuthenticated] = useState(pb.authStore.isValid);
   const [route, setRoute] = useState(parseRoute);
   const [generation, setGeneration] = useState(0);
@@ -396,14 +414,7 @@ export default function App() {
     setBusy(true);
     setError("");
     try {
-      if (google)
-        await pb
-          .collection(app.authCollection)
-          .authWithOAuth2({ provider: "google" });
-      else
-        await pb
-          .collection(app.authCollection)
-          .authWithPassword(email, password);
+      await signIn(email, password, google);
       setPassword("");
     } catch {
       setError("Sign in failed. Check your account or try again.");
