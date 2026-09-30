@@ -35,6 +35,19 @@ jobs:
         with:
           go-version-file: pocketcontext/go.mod
           cache-dependency-path: pocketcontext/go.sum
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Build and test reader
+        working-directory: chatcontext/ui
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.2 --activate
+          pnpm install --frozen-lockfile
+          pnpm typecheck
+          pnpm test
+          pnpm build
+          pnpm exec playwright install --with-deps chromium
       - name: Build server
         working-directory: pocketcontext
         # The flags of pocketcontext's Makefile.
@@ -63,3 +76,5 @@ jobs:
         run: python3 chatcontext/tests/oauth.py
       - name: Test opt-in tracing and snapshot ownership
         run: python3 chatcontext/tests/tracing.py --binary pocketcontext/bin/pocketcontext
+      - name: Test reader privacy and navigation in Chromium
+        run: python3 chatcontext/tests/ui_browser.py --binary pocketcontext/bin/pocketcontext

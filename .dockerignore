@@ -8,3 +8,9 @@
 !docker/entrypoint.sh
 !docker/litestream.yml
 !docker/backup.py
+
+!ui/
+!ui/**
+ui/node_modules/
+ui/dist/
+ui/test-results/

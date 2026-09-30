@@ -1,6 +1,6 @@
 # ChatContext
 
-Team messaging and customer support for humans and AI clients, built on [PocketContext](https://github.com/pocketcontext/pocketcontext). Channels, direct messages, threads and support conversations use authenticated filtered SQL reads and ordinary PocketBase REST writes. ChatContext has no frontend or embedded AI. A website supplies its own visitor interface; visitors can also use the portable skill from their assistant.
+Team messaging and customer support for humans and AI clients, built on [PocketContext](https://github.com/pocketcontext/pocketcontext). Channels, direct messages, threads and support conversations use authenticated filtered SQL reads and ordinary PocketBase REST writes. ChatContext includes an authenticated read-only browser reader and has no embedded AI. A website supplies its own visitor interface; visitors can also use the portable skill from their assistant.
 
 ## Behavior
 
@@ -75,3 +75,11 @@ Identity/client infrastructure was adapted from RaiseContext, with filtered-snap
 ## Optional observability
 
 The pinned server supports per-request, requester-owned buffer tracing. Ordinary requests remain untraced. See [the portable skill](skills/chatcontext/SKILL.md#optional-request-tracing) for separate ObserveContext login, command capture, SQL disclosure and retry instructions. Filtered snapshot timings preserve the application’s existing read policies. Validate adoption with `python3 tests/tracing.py --binary /absolute/path/to/pinned/pocketcontext`.
+
+## Browser reader
+
+The application origin serves a read-only reader inspired by WikiContext. Choose a business collection, search all authorized records, page through results, and follow explicit outgoing and reverse relationships. Stable `/#/<collection>/<record-id>` links survive login and reload; Copy record link omits search state while Copy search link preserves it. URLs show current records, not immutable historical snapshots. Search/filter state stays in the URL, so avoid sharing a search containing private terms.
+
+Each request uses the existing filtered SQL snapshot. Related labels and lists are resolved through the same permissions, never unrestricted record expansion. Browser auth is per-tab and logout clears it. Password and configured Google login use ordinary application identities. Markdown is rendered without raw HTML or remote images. On mobile the collection sidebar collapses into a Browse drawer. No record editing or acknowledgement is performed.
+
+Build with Node.js 24 and pnpm 10.33.2 from `ui/`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm test`, and `pnpm build`. Then start the pinned server from the repository root. Run `python3 tests/ui_browser.py --binary /absolute/path/to/pinned/pocketcontext` after installing Chromium with `pnpm exec playwright install chromium` in `ui/`. Container builds include the reader; generated bundles are not committed.
