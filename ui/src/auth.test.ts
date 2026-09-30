@@ -114,3 +114,12 @@ it("a new account refresh never waits for the previous account's pending renewal
   expect(pb.authStore.record?.id).toBe("second");
   expect(pb.authStore.token).toBe(token + "second-renewed");
 });
+
+it("adopts another tab's same-account renewal without renewing it back", async () => {
+  vi.spyOn(Date, "now").mockReturnValue(2000002400000);
+  pb.authStore.save(token, record);
+  pb.authStore.save(token + "external-renewal", record);
+  const request = vi.spyOn(PocketBase.prototype, "send");
+  await refreshSession();
+  expect(request).not.toHaveBeenCalled();
+});

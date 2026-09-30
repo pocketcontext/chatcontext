@@ -27,6 +27,10 @@ store.onChange(() => {
     currentIdentity = next;
     identityEpoch++;
     void pb.realtime.unsubscribe().catch(() => {});
+  } else if (next) {
+    // Adopt another tab's renewal instead of renewing it back across tabs.
+    refreshedToken = store.token;
+    refreshedAt = Date.now();
   }
 });
 

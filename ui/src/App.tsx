@@ -312,14 +312,16 @@ function Detail({ e, id }: { e: Entity; id: string }) {
 }
 export default function App() {
   const [session, setSession] = useState(sessionEpoch);
-  useEffect(
-    () =>
-      pb.authStore.onChange(() => {
-        setSession(sessionEpoch());
-        void refreshSession();
-      }),
-    [],
-  );
+  useEffect(() => {
+    let observed = sessionEpoch();
+    return pb.authStore.onChange(() => {
+      const next = sessionEpoch();
+      if (next === observed) return;
+      observed = next;
+      setSession(next);
+      void refreshSession();
+    });
+  }, []);
   useEffect(() => {
     void refreshSession();
     const focus = () => {
