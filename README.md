@@ -64,6 +64,7 @@ python3 tests/realtime.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/auth.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/oauth_integration.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/skill.py --binary /absolute/path/to/pinned/pocketcontext
+python3 tests/skill.py --binary /absolute/path/to/pinned/pocketcontext --trace
 python3 tests/deploy.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/backup_integration.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/client.py
