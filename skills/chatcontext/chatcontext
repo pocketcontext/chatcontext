@@ -1,0 +1,13 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["chatcontext-client"]
+#
+# [tool.uv.sources]
+# chatcontext-client = { git = "https://github.com/pocketcontext/chatcontext.git", rev = "b98dd63420d2641cbd05430e658c922130c0fa93" }
+# ///
+"""Standalone launcher for the pinned chatcontext client."""
+from chatcontext_client.cli import main
+
+if __name__ == "__main__":
+    raise SystemExit(main())

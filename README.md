@@ -35,13 +35,16 @@ An operator bootstraps the first administrator through the maintenance REST API:
 
 ## Portable skill
 
-Copy `skills/chatcontext/` into your agent's skills directory. It works outside this repository and requires only Python's standard library. Configure `CHATCONTEXT_URL` and `CHATCONTEXT_USER_EMAIL`. Provisioned clients may additionally use `CHATCONTEXT_USER_PASSWORD`; do not use superuser credentials.
+The standalone launcher `skills/chatcontext/chatcontext` requires Python 3.11+ and [uv](https://docs.astral.sh/uv/). Add its directory to `PATH` to use the commands below. Its first run installs the client from a pinned Git revision. For development and validation, install the current package in a virtual environment with `python3 -m pip install .`. Release the tested package commit first, then update the launcher to that full commit and verify the copied launcher through uv. The package pins its ObserveContext instrumentation dependency separately.
+
+
+Copy `skills/chatcontext/` into your agent's skills directory. It works outside this repository and requires Python 3.11+ and uv. Configure `CHATCONTEXT_URL` and `CHATCONTEXT_USER_EMAIL`. Provisioned clients may additionally use `CHATCONTEXT_USER_PASSWORD`; do not use superuser credentials.
 
 ```sh
-python3 /absolute/path/chatcontext/scripts/cc.py login --google
-python3 /absolute/path/chatcontext/scripts/cc.py whoami
-python3 /absolute/path/chatcontext/scripts/cc.py check
-python3 /absolute/path/chatcontext/scripts/cc.py query 'SELECT id, title, kind FROM conversations'
+chatcontext login --google
+chatcontext whoami
+chatcontext check
+chatcontext query 'SELECT id, title, kind FROM conversations'
 ```
 
 Visitors use `login --email`, then submit the emailed code as documented in [the skill workflows](skills/chatcontext/references/workflows.md). Tokens are cached privately per server and user. Logout removes the local cache; it does not revoke other sessions. Over SSH, forward loopback port 8765 for Google login.
@@ -53,6 +56,7 @@ Edits require `expected_revision`; a stale write returns 409. Re-read before ret
 All fixtures are synthetic and use temporary databases, local SMTP/provider stubs and disposable backup destinations. Use the pinned server, not an application's local database:
 
 ```sh
+python3 tests/launcher.py
 python3 tests/integration.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/security.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/directory_migration.py --binary /absolute/path/to/pinned/pocketcontext

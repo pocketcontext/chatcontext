@@ -1,6 +1,6 @@
 # Workflows
 
-In commands below, `cc` means `python3 /absolute/path/to/installed/chatcontext/scripts/cc.py`.
+In commands below, `cc` means `chatcontext`.
 
 ## Identity
 

@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 from integration import ROOT, server
 
@@ -28,10 +29,10 @@ def main():
         visitor = user('skill-visitor@example.net')
         other = user('skill-other@example.net')
         skill = Path(tmp) / 'portable'
-        shutil.copytree(ROOT / 'skills/chatcontext', skill)
+        skill.mkdir();shutil.copy2(ROOT / 'skills/chatcontext/chatcontext', skill / 'chatcontext')
         env = {**os.environ, 'XDG_CACHE_HOME': str(Path(tmp) / 'cache'), 'CHATCONTEXT_URL': request.base_url, 'CHATCONTEXT_USER_EMAIL': team['email'], 'CHATCONTEXT_USER_PASSWORD': password}
         def cli(*argv, expected=0, email=None):
-            result = subprocess.run(['python3', str(skill / 'scripts/cc.py'), *argv], env={**env, 'CHATCONTEXT_USER_EMAIL': email or env['CHATCONTEXT_USER_EMAIL']}, cwd=tmp, capture_output=True, text=True)
+            result = subprocess.run([sys.executable, str(skill / 'chatcontext'), *argv], env={**env, 'CHATCONTEXT_USER_EMAIL': email or env['CHATCONTEXT_USER_EMAIL']}, cwd=tmp, capture_output=True, text=True)
             assert password not in result.stdout + result.stderr
             assert result.returncode == expected, (argv, result.stdout, result.stderr)
             return json.loads(result.stdout) if result.returncode == 0 and result.stdout.startswith(('{', '[')) else result.stdout
@@ -46,8 +47,9 @@ def main():
         snapshot = ROOT / 'skills/chatcontext/references/schema.json'
         if args.write_schema:
             snapshot.write_text(json.dumps(schema, indent=2) + '\n')
-            (skill / 'references/schema.json').write_text(snapshot.read_text())
+            (ROOT / 'src/chatcontext_client/schema.json').write_text(snapshot.read_text())
         assert json.loads(snapshot.read_text()) == schema, 'SQL schema changed; review and regenerate snapshot'
+        assert json.loads((ROOT / 'src/chatcontext_client/schema.json').read_text()) == schema
         cli('check')
         channel = cli('channel', 'Synthetic private', '--private', '--participants', peer['id'])
         message = cli('send', channel['id'], 'Synthetic message', '--mention', peer['id'])

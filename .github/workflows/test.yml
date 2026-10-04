@@ -14,6 +14,10 @@ jobs:
         with:
           path: chatcontext
           persist-credentials: false
+      - name: Install packaged CLI
+        run: python3 -m pip install uv ./chatcontext
+      - name: Test standalone launcher
+        run: python3 chatcontext/tests/launcher.py
       - name: Test deployment orchestration
         run: python3 chatcontext/tests/deploy_workflow.py
       - name: Test complete evidence backups

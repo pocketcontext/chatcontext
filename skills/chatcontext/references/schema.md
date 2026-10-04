@@ -1,6 +1,6 @@
 # SQL and write contract
 
-`schema.json` is the tested SQL projection. Run `cc.py schema` for the live contract and `check` to compare it. Auth records, team-role authority and counters are not exported. No SQL mutation is supported. All source rows are filtered for the authenticated account before query execution.
+`schema.json` is the tested SQL projection. Run `chatcontext schema` for the live contract and `check` to compare it. Auth records, team-role authority and counters are not exported. No SQL mutation is supported. All source rows are filtered for the authenticated account before query execution.
 
 | Table | Key fields and purpose |
 |---|---|

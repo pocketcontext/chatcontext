@@ -5,9 +5,9 @@ description: Read and participate in ChatContext team channels, direct messages 
 
 # ChatContext
 
-Use the portable Python standard-library client at `scripts/cc.py`. Resolve its absolute path from this skill directory; it works from any working directory. Configure `CHATCONTEXT_URL` and `CHATCONTEXT_USER_EMAIL`; never search for credentials elsewhere. Human and AI accounts use the default `users` identity and the same permissions. Provisioned accounts may set `CHATCONTEXT_USER_PASSWORD`; never use operator credentials here.
+Use the portable Python standard-library client at `chatcontext`. Resolve its absolute path from this skill directory; it works from any working directory. Configure `CHATCONTEXT_URL` and `CHATCONTEXT_USER_EMAIL`; never search for credentials elsewhere. Human and AI accounts use the default `users` identity and the same permissions. Provisioned accounts may set `CHATCONTEXT_USER_PASSWORD`; never use operator credentials here.
 
-For authentication, messaging and support operations, read [workflows](references/workflows.md). Before constructing joins or writes, read [schema](references/schema.md) and run `cc.py check`; the authenticated live schema is authoritative. [Examples](references/examples.md) show common requests.
+For authentication, messaging and support operations, read [workflows](references/workflows.md). Before constructing joins or writes, read [schema](references/schema.md) and run `chatcontext check`; the authenticated live schema is authoritative. [Examples](references/examples.md) show common requests.
 
 Reads use authenticated filtered SQL. Writes use ordinary PocketBase REST through the client. Do not use local databases as a read or write backend. Visitors see only their own support conversations; team accounts see public channels and support, with membership required for private channels and DMs. Administrator status never bypasses conversation privacy.
 
@@ -19,20 +19,22 @@ Read the current revision before edits, deletion, membership changes or assignme
 
 Keep tokens, cached conversation data and downloaded files private. Revalidate cached data against current SQL visibility after membership changes; an old cursor grants no continued access. Private-channel removal immediately revokes access. Protected file access and audit access are independently enforced.
 
+The executable `chatcontext` beside this file is a standalone uv launcher. Install uv and Python 3.11+, then resolve this launcher to an absolute path or add its directory to PATH. The first invocation downloads the pinned package and dependencies. Use the full command name in all examples.
+
 ## Optional request tracing
 
-Ordinary commands do not collect or upload traces. Install the separate ObserveContext skill to opt in for one command. Authenticate with this app normally, then set `OBSERVECONTEXT_URL=https://observe.pocketcontext.com` and `OBSERVECONTEXT_USER_EMAIL` to your Workspace email and run `python3 /path/to/observecontext/scripts/oc.py login --google` separately. ObserveContext uses its own account and token; no ObserveContext credentials belong on this application server.
+Ordinary commands do not collect or upload traces. Install the separate ObserveContext skill to opt in for one command. Authenticate with this app normally, then set `OBSERVECONTEXT_URL=https://observe.pocketcontext.com` and `OBSERVECONTEXT_USER_EMAIL` to your Workspace email and run `observecontext login --google` separately. ObserveContext uses its own account and token; no ObserveContext credentials belong on this application server.
 
 ```sh
-python3 /path/to/observecontext/scripts/oc.py capture \
+observecontext capture \
   --url "${CHATCONTEXT_URL}" --service chatcontext.client --upload \
-  /path/to/chatcontext/scripts/cc.py \
+  -- chatcontext \
   query 'SELECT id FROM conversations LIMIT 5'
 ```
 
 Add `--capture-sql` only when you intend to retain submitted SQL, including potentially private literals. Without it, capture retains timings but no SQL text. The client can record its submitted SQL independently of server SQL-capture settings. Traces exclude result rows, credentials, request bodies and response bodies. The operation is private to its ObserveContext owner except for an operator-managed view-all role. Capture does not grant anyone additional application data access.
 
-The server keeps requested traces in a bounded 16 MiB memory buffer with short expiry; only the requesting authenticated account can retrieve them. The wrapper retrieves server traces and uploads client/server timings together. Failed delivery stays in an account-bound local queue; use `oc.py flush` with the same ObserveContext identity to retry and `oc.py dashboard` for the personal loopback dashboard. No collector service is needed. Capture adds retrieval/upload latency and covers in-process Python urllib SQL/REST requests, not whole agent sessions, prompts, file downloads or realtime streams. Existing immutable traces cannot acquire SQL text retroactively.
+The server keeps requested traces in a bounded 16 MiB memory buffer with short expiry; only the requesting authenticated account can retrieve them. The wrapper retrieves server traces and uploads client/server timings together. Failed delivery stays in an account-bound local queue; use `observecontext flush` with the same ObserveContext identity to retry and `observecontext dashboard` for the personal loopback dashboard. No collector service is needed. Capture adds retrieval/upload latency and covers in-process Python urllib SQL/REST requests, not whole agent sessions, prompts, file downloads or realtime streams. Existing immutable traces cannot acquire SQL text retroactively.
 
 ## Browser record links
 
