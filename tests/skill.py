@@ -14,6 +14,8 @@ from integration import ROOT, server
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--binary', required=True)
+    parser.add_argument('--client', help='released standalone launcher to exercise')
+    parser.add_argument('--trace', action='store_true')
     parser.add_argument('--write-schema', action='store_true')
     args = parser.parse_args()
     with server(args.binary) as request, tempfile.TemporaryDirectory(prefix='chatcontext-skill-') as tmp:
@@ -31,8 +33,13 @@ def main():
         skill = Path(tmp) / 'portable'
         skill.mkdir();shutil.copy2(ROOT / 'skills/chatcontext/chatcontext', skill / 'chatcontext')
         env = {**os.environ, 'XDG_CACHE_HOME': str(Path(tmp) / 'cache'), 'CHATCONTEXT_URL': request.base_url, 'CHATCONTEXT_USER_EMAIL': team['email'], 'CHATCONTEXT_USER_PASSWORD': password}
+        trace_output = Path(tmp) / 'capture.jsonl'
+        if args.trace:
+            env['OBSERVECONTEXT_CAPTURE_V1'] = json.dumps(dict(version=1, url=request.base_url,
+                origin=[], service='chatcontext.client', output=str(trace_output), upload=False,
+                spool=None, flush_timeout=10, capture_sql=False, status_file=None))
         def cli(*argv, expected=0, email=None):
-            result = subprocess.run([sys.executable, str(skill / 'chatcontext'), *argv], env={**env, 'CHATCONTEXT_USER_EMAIL': email or env['CHATCONTEXT_USER_EMAIL']}, cwd=tmp, capture_output=True, text=True)
+            result = subprocess.run(([args.client] if args.client else [sys.executable, str(skill / 'chatcontext')]) + list(argv), env={**env, 'CHATCONTEXT_USER_EMAIL': email or env['CHATCONTEXT_USER_EMAIL']}, cwd=tmp, capture_output=True, text=True)
             assert password not in result.stdout + result.stderr
             assert result.returncode == expected, (argv, result.stdout, result.stderr)
             return json.loads(result.stdout) if result.returncode == 0 and result.stdout.startswith(('{', '[')) else result.stdout
@@ -100,6 +107,11 @@ def main():
         for collection in ('users', 'team_members', 'counters'):
             cli('query', f'SELECT * FROM {collection}', expected=1)
         cli('logout')
+        if args.trace:
+            events = [json.loads(line) for line in trace_output.read_text().splitlines()]
+            assert any(event['method'] == 'POST' and event['route'] == '/api/collections/attachments/records' for event in events)
+            assert all(not event.get('sql') and not event['route'].startswith('/api/files/') for event in events)
+
     print('Portable skill integration and schema checks passed.')
 
 
