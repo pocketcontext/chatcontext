@@ -5,7 +5,7 @@ description: Read and participate in ChatContext team channels, direct messages 
 
 # ChatContext
 
-Use the portable Python standard-library client at `chatcontext`. Resolve its absolute path from this skill directory; it works from any working directory. Configure `CHATCONTEXT_URL` and `CHATCONTEXT_USER_EMAIL`; never search for credentials elsewhere. Human and AI accounts use the default `users` identity and the same permissions. Provisioned accounts may set `CHATCONTEXT_USER_PASSWORD`; never use operator credentials here.
+Use the standalone uv launcher at `chatcontext`. Resolve its absolute path from this skill directory; it works from any working directory. Configure `CHATCONTEXT_URL` and `CHATCONTEXT_USER_EMAIL`; never search for credentials elsewhere. Human and AI accounts use the default `users` identity and the same permissions. Provisioned accounts may set `CHATCONTEXT_USER_PASSWORD`; never use operator credentials here.
 
 For authentication, messaging and support operations, read [workflows](references/workflows.md). Before constructing joins or writes, read [schema](references/schema.md) and run `chatcontext check`; the authenticated live schema is authoritative. [Examples](references/examples.md) show common requests.
 
