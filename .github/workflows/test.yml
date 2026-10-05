@@ -25,6 +25,8 @@ jobs:
         run: python3 chatcontext/tests/deploy_workflow.py
       - name: Test complete evidence backups
         run: python3 chatcontext/tests/backup.py
+      - name: Frozen container startup
+        run: python3 chatcontext/tests/maintenance_entrypoint.py
       - name: Read server revision
         id: server
         shell: bash
@@ -87,3 +89,5 @@ jobs:
         run: python3 chatcontext/tests/tracing.py --binary pocketcontext/bin/pocketcontext
       - name: Test reader privacy and navigation in Chromium
         run: python3 chatcontext/tests/ui_browser.py --binary pocketcontext/bin/pocketcontext
+      - name: Durable runtime maintenance
+        run: python3 chatcontext/tests/maintenance.py --binary pocketcontext/bin/pocketcontext

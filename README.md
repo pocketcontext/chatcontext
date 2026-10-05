@@ -88,3 +88,26 @@ The application origin serves a read-only reader inspired by WikiContext. Choose
 Each request uses the existing filtered SQL snapshot. Related labels and lists are resolved through the same permissions, never unrestricted record expansion. Browser authentication uses the official PocketBase JavaScript SDK LocalAuthStore with an application-specific key. Sign-in persists across tabs and browser restarts in the same browser profile and origin; logout propagates to other tabs but does not revoke copied tokens. Tokens are accessible to application JavaScript, so sign out on shared devices. Existing per-tab sessions are discarded on upgrade and require one new login. Session changes clear displayed private data and subscriptions; stale requests cannot restore an earlier session. Active sessions refresh on startup or focus, at most once per five minutes. Realtime and file access retain their independent authorization; these readers do not subscribe to record events. Password and configured Google login use ordinary application identities. Markdown is rendered without raw HTML or remote images. On mobile the collection sidebar collapses into a Browse drawer. No record editing or acknowledgement is performed.
 
 Build with Node.js 24 and pnpm 10.33.2 from `ui/`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm test`, and `pnpm build`. Then start the pinned server from the repository root. Run `python3 tests/ui_browser.py --binary /absolute/path/to/pinned/pocketcontext` after installing Chromium with `pnpm exec playwright install chromium` in `ui/`. Container builds include the reader; generated bundles are not committed.
+
+## Runtime maintenance freeze
+
+Superusers use `GET /api/context/maintenance` and generation-checked
+`PUT /api/context/maintenance` with `{"readOnly":true,"expectedGeneration":N}`
+to drain and block writes without restarting. Existing authorized reads and
+protected original downloads remain available. Authentication that creates or
+updates records is blocked; preserve an existing operator token for thaw.
+Set `readOnly:false` with the returned generation to resume writes explicitly.
+
+The private durable `pb_data/maintenance.json` marker survives restart. Frozen
+startup requires the existing database, skips restore and superuser/settings
+provisioning, verifies original files, and refuses pending migrations. Malformed
+markers fail closed. Backup/Litestream supervision remains active; this is a
+managed database/API freeze, not cross-host writer fencing or byte-immutable disk.
+Keep the marker with migration snapshots and fence the source before cutover.
+
+Validate with `python3 tests/maintenance_entrypoint.py` and
+`python3 tests/maintenance.py --binary /absolute/path/to/pinned/pocketcontext`.
+
+Replicated startup waits for a private Litestream IPC synchronization before
+serving, including fresh Google-only databases. A failed initial sync refuses
+traffic; clean early shutdown therefore uses an initialized replica.
