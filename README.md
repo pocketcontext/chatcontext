@@ -11,7 +11,7 @@ Team messaging and customer support for humans and AI clients, built on [PocketC
 - Explicit read acknowledgements, private unread tracking, and participant-visible receipts in DMs/support. SQL reads never acknowledge messages. Mentions and thread replies populate a private SQL inbox. Change sequences support polling independently of read state.
 - Channels may be archived. Conversation history and complete backups are retained until deliberate maintenance applies an erasure policy.
 
-See [the implementation brief](docs/implementation-brief.md), [data model](docs/data-model.md), [security contract](docs/security.md) and [deployment preparation](docs/deployment.md). See [release evidence and image digests](docs/release.md). The production API is available at https://chat.pocketcontext.com; see [deployment evidence and remaining verification](DEPLOYMENT.md).
+See [the implementation brief](docs/implementation-brief.md), [data model](docs/data-model.md), [security contract](docs/security.md) and [deployment preparation](docs/deployment.md). See [release evidence and image digests](docs/release.md). The old deployment is retired; [deployment evidence](DEPLOYMENT.md) is historical.
 
 ## Run
 
@@ -73,7 +73,7 @@ python3 tests/backup.py
 python3 tests/deploy_workflow.py
 ```
 
-Container CI also runs `docker/smoke.py config`, `smoke` and `restore` before publishing an image. Full recovery verifies the database and original attachment bytes. Disable automatic updates and use the dedicated locked graceful-stop wrapper for any authorized production deployment. No second writer may restore against the live replica.
+Container CI also runs `docker/smoke.py config`, `smoke` and `restore` before publishing an image. Full recovery verifies the database and original attachment bytes. The old deployment is retired; any separately authorized fresh deployment follows the [common deployment contract](docs/ci-and-deployment.md). App-local installers and wrappers fail closed. No second writer may restore against a live replica.
 
 Identity/client infrastructure was adapted from RaiseContext, with filtered-snapshot and complete-backup infrastructure from AccountContext. The conversation schema and authorization policies are application-owned.
 
@@ -101,7 +101,7 @@ Set `readOnly:false` with the returned generation to resume writes explicitly.
 The private durable `pb_data/maintenance.json` marker survives restart. Frozen
 startup requires the existing database, skips restore and superuser/settings
 provisioning, verifies original files, and refuses pending migrations. Malformed
-markers fail closed. Backup/Litestream supervision remains active; this is a
+markers fail closed. Litestream supervision remains active; this is a
 managed database/API freeze, not cross-host writer fencing or byte-immutable disk.
 Keep the marker with migration snapshots and fence the source before cutover.
 
@@ -112,41 +112,40 @@ Replicated startup waits for a private Litestream IPC synchronization before
 serving, including fresh Google-only databases. A failed initial sync refuses
 traffic; clean early shutdown therefore uses an initialized replica.
 
-## Primary object storage (opt-in)
+## Required container storage and explicit initialization
 
-Set all of `CHATCONTEXT_S3_BUCKET`, `CHATCONTEXT_S3_ENDPOINT`,
+The container requires separate primary S3 and Litestream buckets and credentials.
+Set `CHATCONTEXT_S3_BUCKET`, `CHATCONTEXT_S3_ENDPOINT`,
 `CHATCONTEXT_S3_REGION`, `CHATCONTEXT_S3_ACCESS_KEY_ID`, and
-`CHATCONTEXT_S3_SECRET_ACCESS_KEY` to use a dedicated private S3/R2 bucket
-for PocketBase uploads. `CHATCONTEXT_S3_FORCE_PATH_STYLE` defaults to `true`.
-Partial configuration and shared primary/replica buckets or access keys fail closed. This is primary file storage, separate from
-the `LITESTREAM_*` SQLite replica bucket and prefix. Protected downloads still
-require independent application authorization.
+`CHATCONTEXT_S3_SECRET_ACCESS_KEY`, plus `LITESTREAM_BUCKET`, `LITESTREAM_PATH`,
+`LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY`. Configure
+`LITESTREAM_ENDPOINT` and `LITESTREAM_REGION` for the provider. Replication cannot
+be disabled. Local-storage development remains available using the server directly.
 
-In this mode startup restores SQLite through Litestream and verifies every
-referenced immutable original by streaming its remote SHA-256; it does not
-restore or periodically create legacy database-and-file archives. Local mode
-retains complete archives. Keep object retention independent of replica retention;
-SQLite replication alone cannot recover deleted objects. Unexpected crashes can
-lose database writes since Litestream is asynchronous.
+Run the image once with `init` against a new volume and empty replica, then start
+normally with that same volume/configuration. Normal startup never silently creates
+an empty database. A missing database requires a recoverable replica: restore is
+staged, SQLite integrity and every referenced file (including avatars) are verified,
+and immutable originals must match recorded SHA-256 before installation. Failed
+initialization remains marked and refuses normal startup.
 
-This configuration does not move existing files. Copy and checksum all referenced
-objects before enabling it. A frozen startup refuses any storage configuration
-change: prepare the destination settings before establishing its frozen snapshot.
-Preserve `maintenance.json`, pause CD, and fence the source before thawing a
-destination. Never point a second writable process at the live replica.
+Frozen startup preserves the durable marker, database, auxiliary database and
+persisted storage settings, and skips provisioning. Litestream IPC synchronizes
+before HTTP begins. Clean shutdown forwards signals and flushes replication.
+Retention of primary objects is independent of replica retention; asynchronous
+replication is not a zero-loss guarantee. Never run a second writer against the
+same replica. The image has no archive supervisor or legacy archive recovery.
+`docker/backup.py` remains an offline legacy archive compatibility utility only.
 
-Run `python3 tests/object_storage_settings.py` plus the documented backup,
-maintenance and deployment tests. Use `tests/object_storage_integration.py --binary /path/to/pinned/server
---synthetic-bucket BUCKET` with a disposable local MinIO bucket and the S3
-environment above for real uploads, protected downloads and database-only recovery.
-Container and Litestream fresh-volume recovery validation remain release gates.
+Run `python3 tests/entrypoint.py` and the integration/recovery gates below.
+See [deployment lifecycle](docs/ci-and-deployment.md). The old deployment is retired;
+source alignment does not authorize or recreate a deployment.
 
 ### Container primary-storage recovery gate
 
-After building the image, run the existing `docker/smoke.py config`, `smoke`,
-and `restore` checks, then `python3 docker/object_storage_smoke.py --image IMAGE`
-(use the locked Python environment for VaultContext). The restore check builds
-its pinned local MinIO fixture. The primary-storage check uses separate bucket-scoped
+After building the image, run `docker/smoke.py config`, `smoke`, and `restore`
+with `--image IMAGE`. The restore check invokes `docker/object_storage_smoke.py`
+and builds its pinned local MinIO fixture; no duplicate invocation is needed. The primary-storage check uses separate bucket-scoped
 synthetic keys, uploads real protected files, rejects unrelated-user downloads,
 and tests frozen restart plus a new destination volume. It compares every main
 database table restored by Litestream before destroying the source volume and

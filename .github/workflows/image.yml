@@ -7,8 +7,8 @@ on:
 permissions:
   contents: read
 
-# On main, runs wait for each other, so `latest` always ends at the newest commit. Elsewhere a new
-# push cancels the run of the previous one.
+# Serialize main releases without cancelling an active deployment. GitHub does not
+# guarantee commit order; explicit current-main checks reject stale reruns.
 concurrency:
   group: image-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -19,7 +19,15 @@ env:
 jobs:
   # Every branch and pull request: build for the runner's architecture and run the image.
   check:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd
+            runner: ubuntu-24.04
+          - arch: arm
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,9 +44,9 @@ jobs:
           tags: chatcontext:ci
           build-args: REVISION=${{ github.sha }}
           provenance: false
-          # The scope of the amd64 publication build below, so that build starts from this cache.
-          cache-from: type=gha,scope=amd
-          cache-to: type=gha,mode=max,scope=amd
+          # Reuse this architecture's validated build cache during publication.
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
       - name: Show the image
         run: |
           docker image inspect chatcontext:ci --format 'image={{.Id}} architecture={{.Architecture}} revision={{index .Config.Labels "org.opencontainers.image.revision"}}'
@@ -54,17 +62,14 @@ jobs:
         run: python3 docker/smoke.py config --image chatcontext:ci
       - name: Smoke test
         run: python3 docker/smoke.py smoke --image chatcontext:ci
-      - name: Restore drill
+      - name: Protected files and populated Litestream recovery
         run: python3 docker/smoke.py restore --image chatcontext:ci
 
       - name: Migration database equality gate
         run: python3 tests/test_object_storage_equivalence.py
-      - name: Primary object storage and Litestream recovery
-        run: python3 docker/object_storage_smoke.py --image chatcontext:ci
 
-  # Main only, from here on (a push, or a manual run on main). The Python tests gate the publication.
+  # Application validation runs once on every event, including pull requests.
   tests:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     uses: ./.github/workflows/test.yml
     permissions:
       contents: read
@@ -147,6 +152,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Require current main revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [[ ! "$head" =~ ^[0-9a-f]{40}$ || "$head" != "$GITHUB_SHA" ]]; then
+            echo 'Refusing stale release: workflow revision is not current main.' >&2
+            exit 1
+          fi
       - name: Create and push the manifest list
         working-directory: /tmp/digests
         run: |
@@ -167,13 +182,13 @@ jobs:
         run: docker buildx imagetools inspect "$IMAGE:latest"
 
   deploy:
-    if: vars.CHATCONTEXT_DEPLOY_ENABLED == 'true' && vars.COLORS_PROFILE != ''
+    if: false && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.CONTEXT_DEPLOY_PAUSED != 'true' && vars.COLORS_PROFILE != ''
     needs:
       - manifest
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
-      packages: read
+      contents: read
     environment:
       name: ${{ vars.COLORS_PROFILE }}
     # Serialize rather than cancel: interrupting a deploy midway is worse than making the next one wait.
@@ -181,15 +196,23 @@ jobs:
       group: deploy-${{ vars.COLORS_PROFILE }}
       cancel-in-progress: false
     steps:
+      - name: Require current main revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [[ ! "$head" =~ ^[0-9a-f]{40}$ || "$head" != "$GITHUB_SHA" ]]; then
+            echo 'Refusing stale release: workflow revision is not current main.' >&2
+            exit 1
+          fi
       - name: Deploy via SSH
         env:
-          # SSH key and ephemeral registry token are secrets; host identity remains pinned.
+          # Restricted deployment key; the shared dispatcher pulls the public image.
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_IP: ${{ vars.SERVER_IP }}
           SERVER_USER: ${{ vars.SERVER_USER }}
           SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
-          REGISTRY_USER: ${{ github.actor }}
-          REGISTRY_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ~/.ssh
           # shellcheck disable=SC2046
@@ -198,15 +221,15 @@ jobs:
 
           # Pinned by ONCE at provisioning time, not scanned here. Fail closed.
           if [ -z "$SSH_KNOWN_HOSTS" ]; then
-            echo "SSH_KNOWN_HOSTS is unset - run 'once create' to publish it" >&2
+            echo "SSH_KNOWN_HOSTS is unset; configure the once-pocketcontext-v2 deployment environment" >&2
             exit 1
           fi
           printf '%s\n' "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
 
-          # No remote command. The fixed wrapper accepts only bounded registry credentials
-          # on stdin and destroys its isolated Docker configuration after the update.
-          python3 -c 'import json, os; print(json.dumps({"username": os.environ["REGISTRY_USER"], "token": os.environ["REGISTRY_TOKEN"]}))' | \
-            ssh -T -o StrictHostKeyChecking=yes "$SERVER_USER@$SERVER_IP"
+          # The fixed shared dispatcher accepts no remote command or registry credentials.
+          # It resolves latest to a digest; the workflow does not attest the live source revision.
+          test "$SERVER_USER" = deploy
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes "$SERVER_USER@$SERVER_IP" < /dev/null
       - name: Verify public health
         run: |
           # /up executes a database query, so HTTP 200 also checks database availability.

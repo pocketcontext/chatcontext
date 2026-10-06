@@ -1,9 +1,27 @@
-# Safe updates
+# Deployment lifecycle
 
-`deploy-chatcontext.py` accepts no command arguments and updates only `chat.pocketcontext.com` from `ghcr.io/pocketcontext/chatcontext:latest`. It serializes on its dedicated lock, requires exactly one matching existing container, gracefully stops it, rejects unclean/OOM exits, and invokes ONCE with automatic updates disabled. It refuses ambiguous recovery.
+The old ChatContext deployment is retired. `install.py` and the app-local deployment
+wrapper fail closed and perform no installation or deployment. Do not reinstall
+these commands or recreate the old host credentials.
 
-Optional bounded JSON stdin supplies only short-lived registry `username` and `token`; it cannot select a target. Login uses password-stdin and a private temporary Docker configuration removed on success or failure. Logs never print registry credentials or full container metadata.
+The maintained [common CI and deployment contract](../docs/ci-and-deployment.md)
+is authoritative. Deployment remains explicitly disabled in this repository.
+A separately authorized fresh deployment uses the `once-pocketcontext-v2` shared
+dispatcher with an app-specific forced-command SSH key. The commandless connection
+sends no registry credentials. The dispatcher resolves an immutable image, stops
+the existing writer cleanly under its locks, preserves its volume, and verifies
+the replacement. It does not automatically roll back.
 
-`install.py` is a root-only future deployment step. It replaces only the exact existing ChatContext forced command in `/home/deploy/.ssh/authorized_keys`, preserves other keys, and installs a root-owned wrapper with narrowly scoped sudo. Provision a dedicated restricted key before installation. Do not run this during local application development.
+See [runtime configuration and recovery](../docs/deployment.md) for required
+primary-object storage, separate Litestream credentials and explicit fresh-volume
+initialization. `docker/backup.py` is an offline legacy archive utility, excluded
+from the current image; it is not part of the deployment or recovery entrypoint.
 
-Deployment requires both `CHATCONTEXT_DEPLOY_ENABLED=true` and a nonempty `COLORS_PROFILE`. Leave the app-specific switch unset until authorized initial provisioning and wrapper verification are complete. An inherited organization profile alone cannot enable deployment. See [deployment preparation](../docs/deployment.md). Test the orchestration locally with `python3 tests/deploy_workflow.py`; it uses mocks and never contacts infrastructure.
+## Published image archives
+
+The image workflow publishes tested AMD64 and ARM64 archives in GitHub Releases
+under `image-<full-source-commit>`, with `.sha256` checksums and per-architecture
+source/digest metadata. Verify the checksum before loading an archive with Docker.
+Loading an image is not deployment and does not enable the retired workflow job.
+
+Run `python3 tests/deploy_workflow.py` for isolated deployment-contract checks.

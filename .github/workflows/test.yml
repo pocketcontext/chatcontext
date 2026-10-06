@@ -1,14 +1,16 @@
 name: Chat integration
 on:
-  push:
-  pull_request:
   # image.yml calls this workflow before it publishes an image.
   workflow_call:
 permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -17,18 +19,18 @@ jobs:
       - name: Install packaged CLI
         run: |
           python3 -m venv "$RUNNER_TEMP/client-venv"
-          "$RUNNER_TEMP/client-venv/bin/python" -m pip install uv ./chatcontext
+          "$RUNNER_TEMP/client-venv/bin/python" -m pip install uv==0.12.21 ./chatcontext
           echo "$RUNNER_TEMP/client-venv/bin" >> "$GITHUB_PATH"
       - name: Test standalone launcher
         run: python3 chatcontext/tests/launcher.py
       - name: Test deployment orchestration
         run: python3 chatcontext/tests/deploy_workflow.py
+      - name: Python runtime safety
+        run: python3 chatcontext/tests/entrypoint.py
       - name: Test complete evidence backups
         run: python3 chatcontext/tests/backup.py
       - name: Primary object storage configuration
         run: python3 chatcontext/tests/object_storage_settings.py
-      - name: Frozen container startup
-        run: python3 chatcontext/tests/maintenance_entrypoint.py
       - name: Read server revision
         id: server
         shell: bash

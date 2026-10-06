@@ -1,5 +1,9 @@
 # Initial release — 26 September 2026
 
+Historical evidence only. The old deployment is now retired. Current release and
+deployment controls are documented in [the common contract](ci-and-deployment.md),
+and current container recovery is documented in [deployment](deployment.md).
+
 Application source: `8c724d17ed85ebcbe4f562f5f6aab971ea31a3d5`.
 PocketContext server: `381f81042586afdaa6498b8c0e2a78229a55bdff`.
 Shared workspace registration: `6a7d311`.
