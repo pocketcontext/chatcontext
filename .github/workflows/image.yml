@@ -41,7 +41,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=amd
       - name: Show the image
         run: |
-          docker image inspect chatcontext:ci --format '{{json .Config}}' | python3 -m json.tool
+          docker image inspect chatcontext:ci --format 'image={{.Id}} architecture={{.Architecture}} revision={{index .Config.Labels "org.opencontainers.image.revision"}}'
           docker run --rm --entrypoint sh chatcontext:ci -c 'set -eu; litestream version; pocketcontext --version; cat /app/POCKETCONTEXT_VERSION; find /app /usr/local/bin -type f | sort; test ! -e /app/pb_hooks/.gitkeep'
       - name: Runtime maintenance with the built server
         run: |
@@ -56,6 +56,11 @@ jobs:
         run: python3 docker/smoke.py smoke --image chatcontext:ci
       - name: Restore drill
         run: python3 docker/smoke.py restore --image chatcontext:ci
+
+      - name: Migration database equality gate
+        run: python3 tests/test_object_storage_equivalence.py
+      - name: Primary object storage and Litestream recovery
+        run: python3 docker/object_storage_smoke.py --image chatcontext:ci
 
   # Main only, from here on (a push, or a manual run on main). The Python tests gate the publication.
   tests:

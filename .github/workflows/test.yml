@@ -25,6 +25,8 @@ jobs:
         run: python3 chatcontext/tests/deploy_workflow.py
       - name: Test complete evidence backups
         run: python3 chatcontext/tests/backup.py
+      - name: Primary object storage configuration
+        run: python3 chatcontext/tests/object_storage_settings.py
       - name: Frozen container startup
         run: python3 chatcontext/tests/maintenance_entrypoint.py
       - name: Read server revision

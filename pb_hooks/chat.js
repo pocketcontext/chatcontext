@@ -179,9 +179,15 @@ function write(e) {
     r.set('revision',fresh?1:old.getInt('revision')+1);r.set('created_by',fresh?id:old.getString('created_by'));r.set('updated_by',id);
     e.next();
     if(table==='attachments') {
-      const path=app.dataDir()+'/storage/'+r.collection().id+'/'+r.id+'/'+r.getString('original');
-      const hash=toString($os.cmd('sha256sum',path).output()).split(' ')[0];
-      if(!/^[a-f0-9]{64}$/.test(hash))invalid('Cannot verify attachment hash');
+      // Stream through PocketBase's storage backend: never assume originals are local.
+      const fs=app.newFilesystem();let reader,hash;
+      try {
+       reader=fs.getReader(r.baseFilesPath()+'/'+r.getString('original'));
+       const command=$os.cmd('sha256sum');command.stdin=reader;
+       hash=toString(command.output()).split(' ')[0];
+      } catch (_) { invalid('Cannot hash original'); }
+      finally { if(reader)reader.close();fs.close(); }
+      if(!/^[a-f0-9]{64}$/.test(hash))invalid('Cannot hash original');
       r.set('sha256',hash);app.saveNoValidate(r);
     }
     recordChange(app,r,id,before,fresh?'create':(table==='messages'&&r.getBool('deleted')?'delete':'update'));
