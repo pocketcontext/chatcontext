@@ -32,7 +32,8 @@ def main():
         other = user('skill-other@example.net')
         skill = Path(tmp) / 'portable'
         skill.mkdir();shutil.copy2(ROOT / 'skills/chatcontext/chatcontext', skill / 'chatcontext')
-        env = {**os.environ, 'XDG_CACHE_HOME': str(Path(tmp) / 'cache'), 'CHATCONTEXT_URL': request.base_url, 'CHATCONTEXT_USER_EMAIL': team['email'], 'CHATCONTEXT_USER_PASSWORD': password}
+        env = {**os.environ, 'XDG_CACHE_HOME': str(Path(tmp) / 'cache'), 'XDG_STATE_HOME': str(Path(tmp) / 'state'), 'CHATCONTEXT_URL': request.base_url, 'CHATCONTEXT_USER_EMAIL': team['email'], 'CHATCONTEXT_USER_PASSWORD': password}
+        env.pop('CHATCONTEXT_SESSION_DIR', None)
         trace_output = Path(tmp) / 'capture.jsonl'
         if args.trace:
             env['OBSERVECONTEXT_CAPTURE_V1'] = json.dumps(dict(version=1, url=request.base_url,

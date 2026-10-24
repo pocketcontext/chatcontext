@@ -4,7 +4,7 @@ In commands below, `cc` means `chatcontext`.
 
 ## Identity
 
-Set `CHATCONTEXT_URL=https://chat.pocketcontext.com` to the actual operator-provided origin and `CHATCONTEXT_USER_EMAIL=your-address`. The hostname is a candidate until deployment is configured. HTTPS is required except on loopback for local tests. Credentials are scoped to URL and email in private `XDG_CACHE_HOME/chatcontext` files (or `~/.cache/chatcontext`).
+Set `CHATCONTEXT_URL=https://chat.pocketcontext.com` to the actual operator-provided origin and `CHATCONTEXT_USER_EMAIL=your-address`. The hostname is a candidate until deployment is configured. HTTPS is required except on loopback for local tests. Sessions are scoped to URL and email in private files under `$XDG_STATE_HOME/chatcontext/` (default `~/.local/state/chatcontext/`), or in `CHATCONTEXT_SESSION_DIR` when set, so clearing `~/.cache` does not sign you out. A session left in `~/.cache/chatcontext/` by an older client is moved there on first use, and `logout` removes both.
 
 - Team: `cc login --google`. Open the printed Google URL. For SSH, forward localhost port 8765; the CLI shows the command. Only verified Workspace claims admit new team members.
 - Visitor: `cc login --email` prints an `otpId` and emails a code. Then run `cc login --email --otp-id ID`; enter the code at the hidden prompt. Code expiry is ten minutes, single-use, with failed-attempt limits. Requesting another code invalidates the previous one. Do not put codes in command arguments, shell history or documents.

@@ -17,7 +17,7 @@ SQL queries, search, inbox and sync never mark messages read. Explicit acknowled
 
 Read the current revision before edits, deletion, membership changes or assignment. A 409 means re-read, assess whether the intended change still applies, then retry with the new revision. After a transport error, a write may already have committed: inspect its record or message content before retrying. Do not blindly resend messages or attachments.
 
-Keep tokens, cached conversation data and downloaded files private. Revalidate cached data against current SQL visibility after membership changes; an old cursor grants no continued access. Private-channel removal immediately revokes access. Protected file access and audit access are independently enforced.
+The session token is saved with mode 0600 in `$XDG_STATE_HOME/chatcontext/` (default `~/.local/state/chatcontext/`), or in `CHATCONTEXT_SESSION_DIR` when set; a session left in `~/.cache/chatcontext/` by an older client is moved there on first use, and `logout` removes both. Keep tokens, cached conversation data and downloaded files private. Revalidate cached data against current SQL visibility after membership changes; an old cursor grants no continued access. Private-channel removal immediately revokes access. Protected file access and audit access are independently enforced.
 
 The executable `chatcontext` beside this file is a standalone uv launcher. Install uv and Python 3.11+, then resolve this launcher to an absolute path or add its directory to PATH. The first invocation downloads the pinned package and dependencies. Use the full command name in all examples.
 
