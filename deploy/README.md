@@ -1,16 +1,16 @@
 # Deployment lifecycle
 
-The old ChatContext deployment is retired. `install.py` and the app-local deployment
-wrapper fail closed and perform no installation or deployment. Do not reinstall
-these commands or recreate the old host credentials.
+The old ChatContext deployment is retired. Its old-host `install.py` and app-local
+deployment wrapper are removed. Do not recreate these commands or the old host
+credentials.
 
 The maintained [common CI and deployment contract](../docs/ci-and-deployment.md)
 is authoritative. Deployment remains explicitly disabled in this repository.
-A separately authorized fresh deployment uses the `once-pocketcontext-v2` shared
-dispatcher with an app-specific forced-command SSH key. The commandless connection
-sends no registry credentials. The dispatcher resolves an immutable image, stops
-the existing writer cleanly under its locks, preserves its volume, and verifies
-the replacement. It does not automatically roll back.
+A separately authorized fresh deployment uses the `pocketdeploy-v2` scaffold's
+GitHub delivery with an app-specific forced-command SSH key. The commandless
+connection sends no registry credentials. PocketDeploy converges only this
+application under its host lock, stops the existing writer cleanly, preserves its
+volume, and health-checks the replacement. It does not automatically roll back.
 
 See [runtime configuration and recovery](../docs/deployment.md) for required
 primary-object storage, separate Litestream credentials and explicit fresh-volume

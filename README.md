@@ -73,7 +73,7 @@ python3 tests/backup.py
 python3 tests/deploy_workflow.py
 ```
 
-Container CI also runs `docker/smoke.py config`, `smoke` and `restore` before publishing an image. Full recovery verifies the database and original attachment bytes. The old deployment is retired; any separately authorized fresh deployment follows the [common deployment contract](docs/ci-and-deployment.md). App-local installers and wrappers fail closed. No second writer may restore against a live replica.
+Container CI also runs `docker/smoke.py config`, `smoke` and `restore` before publishing an image. Full recovery verifies the database and original attachment bytes. The old deployment is retired; any separately authorized fresh deployment follows the [common deployment contract](docs/ci-and-deployment.md). The old-host installer and wrapper are removed. No second writer may restore against a live replica.
 
 Identity/client infrastructure was adapted from RaiseContext, with filtered-snapshot and complete-backup infrastructure from AccountContext. The conversation schema and authorization policies are application-owned.
 
