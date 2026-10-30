@@ -71,6 +71,8 @@ jobs:
         run: python3 chatcontext/tests/directory_migration.py --binary pocketcontext/bin/pocketcontext
       - name: Test authorization boundaries
         run: python3 chatcontext/tests/security.py --binary pocketcontext/bin/pocketcontext
+      - name: Test snapshot reuse read-after-write and privacy
+        run: python3 chatcontext/tests/snapshot_freshness.py --binary pocketcontext/bin/pocketcontext
       - name: Test realtime authorization and revocation
         run: python3 chatcontext/tests/realtime.py --binary pocketcontext/bin/pocketcontext
       - name: Test authentication and deployment settings

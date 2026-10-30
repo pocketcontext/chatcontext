@@ -76,8 +76,14 @@ def main():
         assert marker not in json.dumps(write_trace) and created['id'] not in json.dumps(write_trace)
         call('GET', '/api/context/traces/' + headers['X-Context-Request-Id'], token=tokens[1], expected=404)
 
-        baseline, headers = call('POST', '/api/context/query', {'sql': sql})
-        assert 'X-Context-Request-Id' not in headers
+        # The first read after the write builds a new snapshot; unchanged later reads reuse it.
+        sql_phases = {'snapshot.wait', 'snapshot.acquire', 'sql.prepare', 'sql.execute', 'sql.scan'}
+        baseline, headers = call('POST', '/api/context/query', {'sql': sql}, headers={'X-Context-Trace': '1'})
+        cold, _ = call('GET', '/api/context/traces/' + headers['X-Context-Request-Id'])
+        spans = {span['name'] for span in cold['spans']}
+        assert sql_phases | {'snapshot.build', 'snapshot.reader_init'} <= spans, spans
+        untraced, headers = call('POST', '/api/context/query', {'sql': sql})
+        assert untraced == baseline and 'X-Context-Request-Id' not in headers
         for capture_sql in (False, True):
             fields = {'X-Context-Trace': '1'}
             if capture_sql:
@@ -93,7 +99,7 @@ def main():
             assert trace['request_id'] == identifier and trace['status'] == 200
             assert trace.get('sql', '') == (sql if capture_sql else '')
             spans = {span['name'] for span in trace['spans']}
-            assert {'snapshot.wait', 'snapshot.build', 'snapshot.reader_init', 'sql.prepare', 'sql.execute', 'sql.scan'} <= spans, spans
+            assert sql_phases <= spans and not spans & {'snapshot.build', 'snapshot.reader_init'}, spans
             encoded = json.dumps(trace)
             assert marker not in encoded and created['id'] not in encoded
             assert password not in encoded and all(token not in encoded for token in tokens)

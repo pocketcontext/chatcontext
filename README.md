@@ -60,6 +60,7 @@ python3 tests/launcher.py
 python3 tests/integration.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/security.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/directory_migration.py --binary /absolute/path/to/pinned/pocketcontext
+python3 tests/snapshot_freshness.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/realtime.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/auth.py --binary /absolute/path/to/pinned/pocketcontext
 python3 tests/oauth_integration.py --binary /absolute/path/to/pinned/pocketcontext
@@ -72,6 +73,8 @@ python3 tests/oauth.py
 python3 tests/backup.py
 python3 tests/deploy_workflow.py
 ```
+
+`tests/snapshot_freshness.py` checks reused SQL snapshots: messages, channel and team membership changes, internal notes and receipts are visible or withdrawn on the next read for the affected account, without leakage to non-members, administrators outside private conversations or other visitors.
 
 Container CI also runs `docker/smoke.py config`, `smoke` and `restore` before publishing an image. Full recovery verifies the database and original attachment bytes. The old deployment is retired; any separately authorized fresh deployment follows the [common deployment contract](docs/ci-and-deployment.md). The old-host installer and wrapper are removed. No second writer may restore against a live replica.
 

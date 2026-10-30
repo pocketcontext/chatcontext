@@ -1,6 +1,6 @@
 # Authorization and synchronization
 
-SQL uses requester-filtered snapshots with explicit columns. Auth records, roles, OTP attempt counters and change-number allocation remain source-only. PocketBase rules do not filter SQL; each exported collection has a separate filter. The filter predicates use current source membership from one coherent snapshot. Limits fail closed rather than returning incomplete exports.
+SQL uses requester-filtered snapshots with explicit columns. Auth records, roles, OTP attempt counters and change-number allocation remain source-only. PocketBase rules do not filter SQL; each exported collection has a separate filter. The filter predicates use current source membership from one coherent snapshot. Limits fail closed rather than returning incomplete exports. The pinned server reuses each account's private snapshot until any committed source-database write, including messages, memberships, `team_members`, receipts and account changes, so a read after a confirmed write observes it with current authorization. At most four copies are retained in private server temporary files; authentication runs on every request first. Background snapshots, `trackChanges` and per-account admission (`maxConcurrentPerRequester`) are not configured.
 
 | Resource | Team member | External visitor |
 | --- | --- | --- |

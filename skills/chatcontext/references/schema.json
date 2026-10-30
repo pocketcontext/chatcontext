@@ -405,11 +405,12 @@
   ],
   "permissionModel": "filtered-snapshot",
   "limits": {
-    "maxBytes": 1048576,
     "timeoutMs": 2000,
-    "maxRows": 500
+    "maxRows": 500,
+    "maxBytes": 1048576
   },
   "snapshotLimits": {
+    "maxConcurrentPerRequester": 0,
     "timeoutMs": 5000,
     "maxRows": 100000,
     "maxBytes": 33554432,
