@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Command-line client for a ChatContext messaging server.
 
-Configuration comes from three environment variables:
+Connection settings come from CLI options, environment variables, then saved defaults:
   CHATCONTEXT_URL             server address, for example https://chat.example.com
   CHATCONTEXT_USER_EMAIL     email of an account in the `users` collection
   CHATCONTEXT_USER_PASSWORD  password of that account (optional with Google login)
@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import stat
 import sys
 import tempfile
 import time
@@ -59,17 +60,105 @@ def dump(data, pretty=False):
     return json.dumps(data, separators=(',', ':'), ensure_ascii=False)
 
 
-def config(names=ENV[:2]):
-    missing = [name for name in names if not os.environ.get(name)]
-    if missing:
-        raise Fail(2, 'missing environment variable: ' + ', '.join(missing) + '. Ask the user to set every missing variable; do not look for credentials elsewhere.')
-    url = os.environ[ENV[0]].rstrip('/')
-    parsed = urllib.parse.urlsplit(url)
+def config(args=None):
+    url = getattr(args, 'connection_url', None) or os.environ.get(ENV[0])
+    email = getattr(args, 'connection_email', None) or os.environ.get(ENV[1])
+    saved = read_default() if not (url and email) else {}
+    url = (url or saved.get('url') or '').rstrip('/')
+    email = email or saved.get('email') or ''
+    password = os.environ.get(ENV[2])
+    if not url or not email:
+        raise Fail(2, 'Configure chatcontext with login --url URL --email EMAIL, or set ' + ', '.join(ENV[:2]))
+    if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in url):
+        raise Fail(2, '--url cannot contain whitespace or control characters')
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        parsed.port
+    except ValueError:
+        raise Fail(2, '--url must have a valid host and port') from None
     if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
-        raise Fail(2, 'CHATCONTEXT_URL must be an HTTP(S) URL without credentials, query, or fragment')
+        raise Fail(2, '--url must be an HTTP(S) URL without credentials, query, or fragment')
     if parsed.scheme == 'http' and parsed.hostname not in ('localhost', '127.0.0.1', '::1'):
         raise Fail(2, 'Use HTTPS for a remote ChatContext server')
-    return {'url': url, 'email': os.environ[ENV[1]], 'password': hide(os.environ.get(ENV[2]))}
+    if not isinstance(email, str) or not email.strip() or '@' not in email or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in email):
+        raise Fail(2, '--email must be a nonempty account email without whitespace')
+    return {'url': url, 'email': email, 'password': hide(password)}
+
+
+def state_dir():
+    folder = os.environ.get('CHATCONTEXT_SESSION_DIR')
+    return Path(folder) if folder else Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local' / 'state') / 'chatcontext'
+
+
+def default_file():
+    return state_dir() / 'default.json'
+
+
+def private_json(path):
+    """Read only a private regular file, never a symlink or another user's state."""
+    parent = path.parent.lstat()
+    if not stat.S_ISDIR(parent.st_mode) or parent.st_uid != os.getuid() or stat.S_IMODE(parent.st_mode) != 0o700:
+        raise ValueError('unsafe state directory')
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd) as handle:
+        info = os.fstat(handle.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o600 or info.st_size > 65536:
+            raise ValueError('unsafe state file')
+        return json.load(handle)
+
+
+def read_default():
+    try:
+        value = private_json(default_file())
+        if not isinstance(value, dict) or set(value) != {'url', 'email'} or not all(isinstance(value[k], str) and value[k] for k in value):
+            raise ValueError('invalid default')
+        return value
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError, TypeError):
+        raise Fail(2, 'Cannot read private default.json; remove or repair it before continuing.') from None
+
+
+def write_private(path, value):
+    temporary = None
+    try:
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        info = path.parent.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
+            raise OSError('unsafe state directory')
+        with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix='.session-', delete=False) as handle:
+            temporary = Path(handle.name)
+            os.fchmod(handle.fileno(), 0o600)
+            json.dump(value, handle)
+        os.replace(temporary, path)
+        return True
+    except OSError:
+        say('note: private session settings could not be saved; check the state directory permissions')
+        return False
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def save_default(cfg, session):
+    saved = load_session(cfg)
+    if not saved or saved.get('token') != session.get('token'):
+        raise Fail(1, 'Login succeeded but the session was not saved; default unchanged.')
+    if not write_private(default_file(), {k: cfg[k] for k in ('url', 'email')}):
+        raise Fail(1, 'Login succeeded but default settings were not saved.')
+
+
+def logout(cfg, forget=False):
+    session_file(cfg).unlink(missing_ok=True)
+    if forget and read_default() == {k: cfg[k] for k in ('url', 'email')}:
+        default_file().unlink(missing_ok=True)
+
+
+def connection_options(parser, url=True, email=True):
+    if url:
+        parser.add_argument('--url', dest='connection_url', default=argparse.SUPPRESS, help='application server URL (overrides environment and saved default)')
+    if email:
+        parser.add_argument('--email', dest='connection_email', default=argparse.SUPPRESS, help='account email (overrides environment and saved default)')
 
 
 # Session file: one per server URL and email, readable only by the current user. It lives in
@@ -80,22 +169,12 @@ def session_name(cfg):
 
 
 def session_file(cfg):
-    folder = os.environ.get('CHATCONTEXT_SESSION_DIR')
-    if not folder:
-        state = os.environ.get('XDG_STATE_HOME') or str(Path.home() / '.local' / 'state')
-        folder = str(Path(state) / 'chatcontext')
-    return Path(folder) / session_name(cfg)
-
-
-def legacy_session_file(cfg):
-    """Where clients before ENG-55 kept the session; read once and moved."""
-    base = os.environ.get('XDG_CACHE_HOME') or str(Path.home() / '.cache')
-    return Path(base) / 'chatcontext' / session_name(cfg)
+    return state_dir() / session_name(cfg)
 
 
 def read_session(cfg, path):
     try:
-        session = json.loads(path.read_text())
+        session = private_json(path)
         if not isinstance(session, dict) or session.get('url') != cfg['url'] or session.get('email') != cfg['email']:
             return None
         return session if isinstance(session.get('token'), str) and hide(session['token']) else None
@@ -104,30 +183,11 @@ def read_session(cfg, path):
 
 
 def load_session(cfg):
-    path = session_file(cfg)
-    if path.exists():
-        return read_session(cfg, path)
-    legacy = legacy_session_file(cfg)
-    session = read_session(cfg, legacy)
-    if session is not None and save_session(cfg, session):
-        legacy.unlink(missing_ok=True)
-    return session
+    return read_session(cfg, session_file(cfg))
 
 
 def save_session(cfg, session):
-    path = session_file(cfg)
-    try:
-        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        os.chmod(path.parent, 0o700)
-        with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, prefix='.session-', delete=False) as handle:
-            temporary = Path(handle.name)
-            os.fchmod(handle.fileno(), 0o600)
-            json.dump(session, handle)
-        os.replace(temporary, path)
-        return True
-    except OSError as error:
-        say(f'note: session not saved ({error.strerror}); sign-in will be required again')
-        return False
+    return write_private(session_file(cfg), session)
 
 
 # HTTP
@@ -167,7 +227,7 @@ def send(cfg, method, path, body=None, token=None, timeout=TIMEOUT):
 
 def login(cfg):
     if not cfg.get('password'):
-        raise Fail(2, 'Set CHATCONTEXT_USER_PASSWORD for password login, or run chatcontext login --google (team) / login --email (visitor).')
+        raise Fail(2, 'Set CHATCONTEXT_USER_PASSWORD for password login, or run chatcontext login --google (team) / login --email-otp (visitor).')
     status, data = send(cfg, 'POST', '/api/collections/users/auth-with-password', {'identity': cfg['email'], 'password': cfg['password']})
     if status != 200 or not isinstance(data, dict) or 'token' not in data:
         raise Fail(1, f'login as {cfg["email"]} failed: HTTP {status}\n{dump(data)}\nCheck the three CHATCONTEXT_ variables with the user. User credentials only.')
@@ -315,14 +375,14 @@ def call(cfg, method, path, body=None):
         # Renew at most every five minutes, or near expiry, to respect auth rate limits.
         status, data = oauth_send(cfg, 'POST', '/api/collections/users/auth-refresh', token=session['token'])
         if status != 200:
-            raise Fail(1, f'Browser/email session could not be refreshed (HTTP {status}); sign in again with chatcontext login --google or --email.')
+            raise Fail(1, f'Browser/email session could not be refreshed (HTTP {status}); sign in again with chatcontext login --google or --email-otp.')
         session = auth_session(cfg, data, session['method'])
         if path == '/api/collections/users/auth-refresh':
             return status, data
     status, data = send(cfg, method, path, body, session['token'])
     if cached and 400 <= status < 500 and status != 409 and (status == 401 or token_rejected(cfg, session['token'])):
         if session.get('method') in ('google', 'email'):
-            raise Fail(1, 'Browser/email session was rejected; sign in again with chatcontext login --google or --email.')
+            raise Fail(1, 'Browser/email session was rejected; sign in again with chatcontext login --google or --email-otp.')
         session = login(cfg)
         status, data = send(cfg, method, path, body, session['token'])
     return status, data
@@ -369,7 +429,7 @@ def email_login(cfg, otp_id=None):
         if status != 200 or not isinstance(data, dict) or not data.get('otpId'):
             raise Fail(1, 'Email code request failed; check the address and retry later.')
         say(dump({'otpId': data['otpId'], 'expires_in_seconds': 600}), sys.stdout)
-        say('Run login --email --otp-id ID and enter the emailed code. A replacement invalidates the previous code.')
+        say('Run login --email-otp --otp-id ID and enter the emailed code. A replacement invalidates the previous code.')
         return None
     import getpass
     code = hide(getpass.getpass('Email code: '))
@@ -655,20 +715,15 @@ def run(args):
         print(''.join(secrets.choice(ID_ALPHABET) for _ in range(15)))
         return 0
     if args.command == 'logout':
-        cfg = config(ENV[:2])
-        path = session_file(cfg)
-        path.unlink(missing_ok=True)
-        say(f'removed {path}', sys.stdout)
-        legacy = legacy_session_file(cfg)
-        if legacy.exists():
-            legacy.unlink(missing_ok=True)
-            say(f'removed {legacy}', sys.stdout)
+        cfg = config(args=args)
+        logout(cfg, args.forget)
         return 0
-    cfg = config()
+    cfg = config(args=args)
     if args.command == 'login':
-        result = google_login(cfg, args.port, args.timeout) if args.google else email_login(cfg, args.otp_id) if args.email else login(cfg)
+        result = google_login(cfg, args.port, args.timeout) if args.google else email_login(cfg, args.otp_id) if args.email_otp else login(cfg)
         if result is None:
             return 0
+        save_default(cfg, result)
         say(f'Signed in as {cfg["email"]} at {cfg["url"]}', sys.stdout)
         return 0
     # Reject malformed writes before authentication or any network request.
@@ -746,10 +801,10 @@ def parse(argv):
         command = commands.add_parser(name, parents=[pretty], help=text, description=text)
         for argument, argument_help in arguments:
             command.add_argument(argument, help=argument_help)
-    oauth_login = commands.add_parser('login', help='sign in using Google, emailed code, or a provisioned password')
+    oauth_login = commands.add_parser('login', parents=[pretty], help='sign in using Google, emailed code, or a provisioned password')
     modes = oauth_login.add_mutually_exclusive_group(required=True)
     modes.add_argument('--google', action='store_true')
-    modes.add_argument('--email', action='store_true', help='request an email code; with --otp-id prompt for the code')
+    modes.add_argument('--email-otp', action='store_true', help='request an email code; with --otp-id prompt for the code')
     modes.add_argument('--password', action='store_true', help='use provisioned password from environment')
     oauth_login.add_argument('--otp-id', help='challenge id returned by email code request')
     oauth_login.add_argument('--port', type=int, default=8765, help='loopback callback port; register the matching redirect URI')
@@ -766,6 +821,10 @@ def parse(argv):
     add('newid', 'print a new 15-character record id for use inside a batch')
     add('logout', 'remove the saved session')
     add_messaging(commands, pretty)
+    connection_options(parser)
+    for name, command in commands.choices.items():
+        connection_options(command, url='--url' not in command._option_string_actions, email='--email' not in command._option_string_actions)
+    commands.choices['logout'].add_argument('--forget', action='store_true', help='also forget matching saved defaults')
     args = parser.parse_args(argv)
     args.pretty = getattr(args, 'pretty', False)
     return args

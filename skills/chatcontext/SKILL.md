@@ -5,7 +5,7 @@ description: Read and participate in ChatContext team channels, direct messages 
 
 # ChatContext
 
-Use the standalone uv launcher at `chatcontext`. Resolve its absolute path from this skill directory; it works from any working directory. Configure `CHATCONTEXT_URL` and `CHATCONTEXT_USER_EMAIL`; never search for credentials elsewhere. Human and AI accounts use the default `users` identity and the same permissions. Provisioned accounts may set `CHATCONTEXT_USER_PASSWORD`; never use operator credentials here.
+Use the standalone uv launcher at `chatcontext`. Resolve its absolute path from this skill directory; it works from any working directory. Run `chatcontext login --url URL --email EMAIL` with the appropriate authentication mode; later commands use saved defaults. Environment overrides remain optional. Never search for credentials elsewhere. Human and AI accounts use the default `users` identity and the same permissions. Provisioned accounts may set `CHATCONTEXT_USER_PASSWORD`; never use operator credentials here.
 
 For authentication, messaging and support operations, read [workflows](references/workflows.md). Before constructing joins or writes, read [schema](references/schema.md) and run `chatcontext check`; the authenticated live schema is authoritative. [Examples](references/examples.md) show common requests.
 
@@ -17,13 +17,13 @@ SQL queries, search, inbox and sync never mark messages read. Explicit acknowled
 
 Read the current revision before edits, deletion, membership changes or assignment. A 409 means re-read, assess whether the intended change still applies, then retry with the new revision. After a transport error, a write may already have committed: inspect its record or message content before retrying. Do not blindly resend messages or attachments.
 
-The session token is saved with mode 0600 in `$XDG_STATE_HOME/chatcontext/` (default `~/.local/state/chatcontext/`), or in `CHATCONTEXT_SESSION_DIR` when set; a session left in `~/.cache/chatcontext/` by an older client is moved there on first use, and `logout` removes both. Keep tokens, cached conversation data and downloaded files private. Revalidate cached data against current SQL visibility after membership changes; an old cursor grants no continued access. Private-channel removal immediately revokes access. Protected file access and audit access are independently enforced.
+The session token is saved with mode 0600 in `$XDG_STATE_HOME/chatcontext/` (default `~/.local/state/chatcontext/`), or in `CHATCONTEXT_SESSION_DIR` when set. Keep tokens, cached conversation data and downloaded files private. Revalidate cached data against current SQL visibility after membership changes; an old cursor grants no continued access. Private-channel removal immediately revokes access. Protected file access and audit access are independently enforced.
 
 The executable `chatcontext` beside this file is a standalone uv launcher. Install uv and Python 3.11+, then resolve this launcher to an absolute path or add its directory to PATH. The first invocation downloads the pinned package and dependencies. Use the full command name in all examples.
 
 ## Optional request tracing
 
-Ordinary commands do not collect or upload traces. Install the separate ObserveContext skill to opt in for one command. Authenticate with this app normally, then set `OBSERVECONTEXT_URL=https://observe.pocketcontext.com` and `OBSERVECONTEXT_USER_EMAIL` to your Workspace email and run `observecontext login --google` separately. ObserveContext uses its own account and token; no ObserveContext credentials belong on this application server.
+Ordinary commands do not collect or upload traces. Install the separate ObserveContext skill to opt in for one command. Authenticate with this app normally, then run `observecontext login --google --url https://observe.pocketcontext.com --email YOUR_WORKSPACE_EMAIL` separately. ObserveContext uses its own account and token; no ObserveContext credentials belong on this application server.
 
 ```sh
 observecontext capture \
@@ -39,3 +39,11 @@ The server keeps requested traces in a bounded 16 MiB memory buffer with short e
 ## Browser record links
 
 The authenticated reader is available at the application origin. Link to a record with `/#/<collection>/<record-id>` using its stable ID, for example `/#/messages/<record-id>`. Links open current authorized data and grant no access. Use the reader’s Copy record link action for wiki references; retain immutable evidence in WikiContext when a historical claim requires it. Never include auth tokens or protected file URLs in wiki links. Opening a link does not acknowledge messages or notifications.
+
+## Saved CLI login settings
+
+Run `chatcontext login --url https://server.example.com --email you@example.com --google`. Successful explicit login writes `default.json` containing only the URL and email alongside the per-server/account token files in `$XDG_STATE_HOME/chatcontext/` (default `~/.local/state/chatcontext/`), or `CHATCONTEXT_SESSION_DIR`. Directories are mode 0700; files are mode 0600. Later commands need no URL/email exports. Passwords remain outside these files.
+
+Connection options override `CHATCONTEXT_URL` / `CHATCONTEXT_USER_EMAIL`, which override saved defaults. Put `--url` and `--email` before any command, or after a command unless that command already uses the option for a domain value. Only successful explicit login changes the default; ordinary commands, refreshes and failed login do not. `logout` removes the selected token and retains defaults; `logout --forget` also removes the default when it matches that account/server. Old cache sessions are not migrated; sign in again.
+
+Visitor sign-in uses `login --email-otp --url URL --email EMAIL`, then the same options with `--otp-id ID` to enter the code. `--email` always selects the account.

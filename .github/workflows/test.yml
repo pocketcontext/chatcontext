@@ -89,6 +89,8 @@ jobs:
         run: python3 chatcontext/tests/skill.py --binary pocketcontext/bin/pocketcontext --trace
       - name: Test portable client utilities
         run: python3 chatcontext/tests/client.py
+      - name: Test saved CLI configuration
+        run: python3 chatcontext/tests/configuration.py
       - name: Test OAuth client
         run: python3 chatcontext/tests/oauth.py
       - name: Test opt-in tracing and snapshot ownership

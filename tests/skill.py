@@ -40,10 +40,13 @@ def main():
                 origin=[], service='chatcontext.client', output=str(trace_output), upload=False,
                 spool=None, flush_timeout=10, capture_sql=False, status_file=None))
         def cli(*argv, expected=0, email=None):
-            result = subprocess.run(([args.client] if args.client else [sys.executable, str(skill / 'chatcontext')]) + list(argv), env={**env, 'CHATCONTEXT_USER_EMAIL': email or env['CHATCONTEXT_USER_EMAIL']}, cwd=tmp, capture_output=True, text=True)
+            result = subprocess.run(([args.client] if args.client else [sys.executable, str(skill / 'chatcontext')]) + list(argv), env={**env, **({'CHATCONTEXT_USER_EMAIL': email} if email else {})}, cwd=tmp, capture_output=True, text=True)
             assert password not in result.stdout + result.stderr
             assert result.returncode == expected, (argv, result.stdout, result.stderr)
             return json.loads(result.stdout) if result.returncode == 0 and result.stdout.startswith(('{', '[')) else result.stdout
+        env.pop('CHATCONTEXT_URL')
+        env.pop('CHATCONTEXT_USER_EMAIL')
+        cli('login', '--password', '--url', request.base_url, '--email', team['email'])
         identity = cli('whoami')
         assert identity['id'] == team['id']
         assert identity['public_display_name'] == ''
