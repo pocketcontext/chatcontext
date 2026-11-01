@@ -4,7 +4,7 @@
 # dependencies = ["chatcontext-client"]
 #
 # [tool.uv.sources]
-# chatcontext-client = { git = "https://github.com/pocketcontext/chatcontext.git", rev = "008b42b7a1ad1fbc8da66e268a2520b7f6f9e8de" }
+# chatcontext-client = { git = "https://github.com/pocketcontext/chatcontext.git", rev = "fedea9266c6da1c9b34a418710c4d912785db98f" }
 # ///
 """Standalone launcher for the pinned chatcontext client."""
 from chatcontext_client.cli import main

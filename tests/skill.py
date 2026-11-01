@@ -31,7 +31,7 @@ def main():
         visitor = user('skill-visitor@example.net')
         other = user('skill-other@example.net')
         skill = Path(tmp) / 'portable'
-        skill.mkdir();shutil.copy2(ROOT / 'skills/chatcontext/chatcontext', skill / 'chatcontext')
+        skill.mkdir();shutil.copy2(Path(args.client) if args.client else ROOT / 'skills/chatcontext/chatcontext', skill / 'chatcontext')
         env = {**os.environ, 'XDG_CACHE_HOME': str(Path(tmp) / 'cache'), 'XDG_STATE_HOME': str(Path(tmp) / 'state'), 'CHATCONTEXT_URL': request.base_url, 'CHATCONTEXT_USER_EMAIL': team['email'], 'CHATCONTEXT_USER_PASSWORD': password}
         env.pop('CHATCONTEXT_SESSION_DIR', None)
         trace_output = Path(tmp) / 'capture.jsonl'
@@ -40,7 +40,7 @@ def main():
                 origin=[], service='chatcontext.client', output=str(trace_output), upload=False,
                 spool=None, flush_timeout=10, capture_sql=False, status_file=None))
         def cli(*argv, expected=0, email=None):
-            result = subprocess.run(([args.client] if args.client else [sys.executable, str(skill / 'chatcontext')]) + list(argv), env={**env, **({'CHATCONTEXT_USER_EMAIL': email} if email else {})}, cwd=tmp, capture_output=True, text=True)
+            result = subprocess.run(([str(skill / 'chatcontext')] if args.client else [sys.executable, str(skill / 'chatcontext')]) + list(argv), env={**env, **({'CHATCONTEXT_USER_EMAIL': email} if email else {})}, cwd=tmp, capture_output=True, text=True)
             assert password not in result.stdout + result.stderr
             assert result.returncode == expected, (argv, result.stdout, result.stderr)
             return json.loads(result.stdout) if result.returncode == 0 and result.stdout.startswith(('{', '[')) else result.stdout
