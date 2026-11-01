@@ -8,6 +8,9 @@ socket:
 # this file. The credentials are not written here: Litestream reads LITESTREAM_ACCESS_KEY_ID
 # and LITESTREAM_SECRET_ACCESS_KEY from the environment itself.
 # A custom endpoint (R2, MinIO) selects path-style addressing automatically.
+# Reduce idle object-store listings; eligible L0 files may remain longer.
+l0-retention-check-interval: 5m
+
 dbs:
   - path: /storage/pb_data/data.db
     replica:
